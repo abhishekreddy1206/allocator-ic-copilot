@@ -1,0 +1,2 @@
+# Preserve the messy CSV fixture byte-for-byte for source SHA checks.
+*.csv -text whitespace=-blank-at-eol

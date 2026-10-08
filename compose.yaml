@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-allocator}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-allocator_local}
+      POSTGRES_DB: ${POSTGRES_DB:-allocator}
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-allocator}:${POSTGRES_PASSWORD:-allocator_local}@db:5432/${POSTGRES_DB:-allocator}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      SEED_DEMO: ${SEED_DEMO:-true}
+    ports: ["127.0.0.1:8000:8000"]
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+  frontend:
+    build: ./frontend
+    ports: ["127.0.0.1:5173:5173"]
+    depends_on:
+      backend:
+        condition: service_healthy
+volumes:
+  pgdata:
