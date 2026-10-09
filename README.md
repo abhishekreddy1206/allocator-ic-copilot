@@ -4,7 +4,7 @@ An allocator’s investment decision workspace: messy manager CSVs become valida
 
 **Deterministic software owns facts. AI helps interpret them.**
 
-This is an independent prototype. It does not use Equi branding or imply affiliation. All bundled manager histories, identities and notes are synthetic.
+This is an independent prototype. All bundled manager histories, identities and notes are synthetic.
 
 ## Quick Start
 
@@ -136,6 +136,8 @@ Required: `fund_id`, `fund_name`, `strategy`, `liquidity`, `period`, `monthly_re
 - **Missing months:** never imputed; observed growth is labeled incomplete and annualized risk/growth/Sharpe/Sortino/Calmar/drawdown are suppressed. Hard risk constraints fail closed.
 
 ## Data Sources
+
+See [DATA_SOURCES.md](DATA_SOURCES.md) for the complete inventory of bundled synthetic manager data, offline market fixtures, public benchmark/macro/factor inputs, and derived evaluation records. It distinguishes data actually used from sources that are not integrated.
 
 ### Yahoo Finance
 

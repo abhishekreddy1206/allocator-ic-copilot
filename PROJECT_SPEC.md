@@ -1,6 +1,8 @@
 # Allocator IC Copilot
 
-An internal allocator decision prototype. Deterministic software owns facts. AI helps interpret them. No Equi branding or implied affiliation.
+An independent allocator decision prototype. Deterministic software owns facts. AI helps interpret them.
+
+The project data inventory and provenance conventions are documented in [DATA_SOURCES.md](DATA_SOURCES.md).
 
 ## Primary journey
 Load a clearly synthetic 18-manager universe; inspect normalization and rejected rows; evaluate a Diversifier mandate; tighten drawdown from 15% to 7%, then quarterly liquidity to monthly; inspect deterministic changes and evidence; open a rules-based briefing; optionally request an evidence-bound AI memo and challenge.
