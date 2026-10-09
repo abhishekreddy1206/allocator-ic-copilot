@@ -93,6 +93,13 @@ export type Fund = {
   data_quality_flags: number;
   synthetic: boolean;
   preference_bonus: number;
+  suitability?: {
+    headline: string;
+    strengths: { text: string; evidence_ids: string[] }[];
+    concerns: { text: string; evidence_ids: string[] }[];
+    missing_evidence: string[];
+    next_step: string;
+  };
 };
 export type Lineage = {
   provider: string;

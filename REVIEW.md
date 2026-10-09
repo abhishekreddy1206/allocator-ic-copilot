@@ -63,3 +63,15 @@ Removed unused Tailwind v3 config, unused Playwright test dependency, obsolete a
 | Live AI narrative quality and complete challenge generation | Blocked by external quota; not claimed verified |
 
 The complete deterministic journey is working. Full live-AI acceptance remains conditional on API project credit.
+
+## Finance usability update verified October 9 2026
+
+Added a CSV/XLSX review flow with worksheet selection, explicit column mapping, cell corrections, real-validator previews inside rolled-back savepoints, and a separate confirmed commit. The additive migration preserves original file bytes, original-source SHA-256, sheet, mapping, and correction history. Existing accepted returns remain immutable; conflicting revisions are quarantined. Original-source downloads and source-row evidence include the reviewed context. Existing CSV API clients remain compatible.
+
+Added backend suitability summaries to new evaluations and surfaced them ahead of score details. They use actual hard-gate outcomes and score contributions, identify unverified source concerns and missing analyses, and count only unresolved warning/error events as follow-up work. Historical runs remain unchanged and render a reevaluation prompt when the new summary is absent. Reviewed imports of the known synthetic dataset retain synthetic labeling through the original-source digest.
+
+Added an Excel comparison snapshot for all managers, with numeric metrics, explicit Yes/No eligibility, synthetic/uploaded labels, observation windows, reasons, concerns, evidence IDs, mandate context and source status. Names and notes are stored as literal strings to prevent formula injection. Added editable Word exports of saved memos or deterministic briefings, with evidence references and methodology appendix. Export failures do not mutate evaluations and exports never call AI or recalculate finance.
+
+Validation: 36 backend tests passed; the four import/export tests passed again after final formatting and labeling edits. Ruff, frontend typecheck/lint/build, Alembic schema check, and the original demo smoke passed. Browser verification covered XLSX upload, missing-field mapping, correction, preview refresh, confirmation, Data Health refresh, suitability cards, and an actual Excel download. The final Word export was rendered and all three pages inspected; both Excel sheets were rendered and reviewed. Live AI quota remains the previously documented limitation.
+
+Remaining limitations: first-row headers and monthly long format are required; the first 200 rows are editable in the preview and at most 300 prioritized issues appear there. XLS/XLSM, workbook formula evaluation, PDF extraction, wide-format returns and revisions to accepted returns are unsupported. Exports are editable/static snapshots without round-trip synchronization. No portfolio-level allocation analysis, firm-specific document templates, or user usability study has been added.

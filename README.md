@@ -23,6 +23,16 @@ Run `make test` and `make lint` to verify the project. Run `docker compose exec 
 
 ![Allocator IC Copilot overview](docs/overview.png)
 
+## Workflow for Finance Users
+
+**Import Excel / CSV** opens a review dialog before saving anything. Select an XLSX worksheet, match your column headers, inspect validation results, and correct cells. Update the preview after each edit, then confirm the import. The first 200 rows are editable in the UI; validation covers all rows, up to 50,000. Issue previews prioritize errors and warnings and show up to 300 events; Data Health holds the full ledger after import. Headers must be in row one and monthly observations must use long format.
+
+XLSX date cells and percentage-formatted numbers are recognized. Workbook formulas are never evaluated or accepted as cached results; replace them with verified values before importing. Legacy XLS, macro-enabled files, merged header layouts, and wide monthly matrices are not supported. Original file bytes, source digest, chosen sheet, column mapping, and corrections are retained. Data Health lets you download the original files. Evidence source records show original values alongside reviewed corrections. Import identities include the review configuration; reimporting the identical reviewed version is idempotent. Corrections can rescue rejected rows, but cannot overwrite existing accepted monthly returns.
+
+**Shortlist** and manager details lead with a deterministic suitability explanation: configured constraints passed or failed, the largest score contributions, unverified source concerns, unavailable analyses, and unresolved data warnings/errors. Routine resolved normalization events are excluded from the action list. These explanations describe the configured policy; they do not establish investment suitability for a real portfolio. Older saved runs remain unchanged; reevaluate to add the explanation to a new snapshot.
+
+**Export comparison Excel** downloads all managers from the saved evaluation with numeric return/risk values, eligibility, rank, score, history windows, exclusion reasons, concerns, and decision evidence IDs. Filters and frozen panes support review. **Export editable Word memo** downloads the displayed saved memo, or a deterministic briefing if none exists, with numbered evidence references and an appendix. Exports are static snapshots; editing them does not update the app. Neither export calls AI or recalculates finance.
+
 ## Why I Built It This Way
 
 The interesting product problem is deciding which manager belongs in a particular sleeve, and explaining why that decision changes. A generic financial chatbot obscures constraints, data problems and calculation assumptions. This product makes those visible before introducing prose generation.
@@ -122,7 +132,7 @@ Required: `fund_id`, `fund_name`, `strategy`, `liquidity`, `period`, `monthly_re
 - **Fees:** percentages are normalized; bare values ≥1 use the documented fee-percentage-point convention, with an action logged. Smaller bare values are decimal fractions. Units cannot be inferred beyond this convention.
 - **Dates:** only unambiguous YYYY-MM, YYYY/MM, or corresponding day dates. Future/incomplete months are rejected.
 - **IDs:** uppercase alphanumeric canonicalization; `a-1` maps to `A1`. Different fund/manager names under the same ID are quarantined; case/punctuation-only name variations are logged. Typos are never fuzzy merged.
-- **Formats:** monthly long format is supported. Wide month columns and separate metadata/return file joins are a documented limitation.
+- **Formats:** CSV and XLSX monthly long format are supported through the reviewed import flow. Wide month columns and separate metadata/return file joins remain limitations.
 - **Missing months:** never imputed; observed growth is labeled incomplete and annualized risk/growth/Sharpe/Sortino/Calmar/drawdown are suppressed. Hard risk constraints fail closed.
 
 ## Data Sources
@@ -296,12 +306,12 @@ Database tests create an isolated private PostgreSQL schema per test and clean o
 
 - Synthetic manager performance; no actual manager underwriting, allocations or investment recommendations.
 - Offline market fixtures are synthetic, not historical cached data. Refresh can produce mixed source regimes; source status remains explicit.
-- Monthly CSV long format only, no XLSX/wide monthly parsing, and no interactive mapping/resolution workflow yet. Quarantined rows must be corrected and reuploaded.
+- CSV/XLSX monthly long format only; no legacy XLS, PDF extraction, wide monthly parsing, or joins across separate metadata/return files. The preview edits the first 200 rows; later-row errors must be corrected in the source file. Existing accepted returns cannot be replaced through this workflow.
 - Short overlapping windows, stale publication coverage and omitted factors limit inference. No FX translation, gross/net reconstruction, serial-correlation adjustment, robust standard errors or survivorship-bias correction.
 - Scores prioritize a small transparent policy; no portfolio covariance optimizer or mandate-specific peer-percentile score.
 - Synchronous market/AI endpoints can take time; loading/errors are visible, no background job queue. Provider failure categories are shown; AI errors are redacted.
 - Evidence listings use a capped result set; filters reach relevant entries. Data Health paginates the full issue ledger. No server-side cursor pagination or historical-run navigation UI.
-- Print-to-PDF uses browser printing; paper length depends on generated prose and browser settings. There is no fixed-layout PDF generation service.
+- Editable Word and static Excel exports are available. Print-to-PDF uses browser printing; paper length depends on generated prose and browser settings. There is no fixed-layout PDF generation service.
 - Prototype concurrency, access control and audit tamper resistance are not production hardened.
 
 ## Production Evolution

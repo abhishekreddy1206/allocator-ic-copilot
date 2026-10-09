@@ -84,8 +84,8 @@ def month(value: str) -> str:
     return str(date.to_period("M"))
 
 
-def ingest_csv(session: Session, filename: str, content: str) -> dict:
-    digest = hashlib.sha256(content.encode()).hexdigest()
+def ingest_csv(session: Session, filename: str, content: str, identity_context: str = "") -> dict:
+    digest = hashlib.sha256((content + identity_context).encode()).hexdigest()
     previous = session.scalar(select(Upload).where(Upload.sha256 == digest))
     if previous:
         return {**previous.summary, "already_imported": True, "upload_id": previous.id}

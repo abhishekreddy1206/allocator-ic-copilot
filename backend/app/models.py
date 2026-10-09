@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 from uuid import uuid4
-from sqlalchemy import String, Float, Integer, Boolean, DateTime, Text, ForeignKey, UniqueConstraint
+from sqlalchemy import String, Float, Integer, Boolean, DateTime, Text, ForeignKey, UniqueConstraint, LargeBinary
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -25,6 +25,8 @@ class Upload(Base):
     filename: Mapped[str] = mapped_column(String)
     sha256: Mapped[str] = mapped_column(String, unique=True)
     raw_csv: Mapped[str] = mapped_column(Text)
+    original_file: Mapped[bytes | None] = mapped_column(LargeBinary)
+    source_metadata: Mapped[dict | None] = mapped_column(JSONB)
     summary: Mapped[dict] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 

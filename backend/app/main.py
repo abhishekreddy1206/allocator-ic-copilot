@@ -3,7 +3,7 @@
 from contextlib import asynccontextmanager
 import os
 from typing import Annotated
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import RateLimitError
@@ -16,6 +16,10 @@ from app.service import seed_demo, evaluate, store_market
 from app.ingestion import ingest_csv
 from app.evidence import briefing_sections, persist_memo
 from app.ai import OpenAIResponsesProvider, generate_verified
+from app.imports import read_table, preview, import_table, FIELDS, REQUIRED
+from app.exports import comparison_xlsx, memo_docx
+from fastapi.responses import Response
+import json
 
 
 @asynccontextmanager
@@ -81,6 +85,68 @@ async def upload(db: DB, files: list[UploadFile] = File(...)):
         raise HTTPException(422, str(exc)) from exc
     db.commit()
     return {"summaries": summaries, "result": run.result}
+
+
+async def reviewed_file(file, mapping, corrections, sheet):
+    data = await file.read(8 * 1024 * 1024 + 1)
+    if len(data) > 8 * 1024 * 1024:
+        raise HTTPException(413, "File must be under 8 MB")
+    try:
+        mapped, edits = json.loads(mapping), json.loads(corrections)
+        if not isinstance(mapped, dict) or not isinstance(edits, dict):
+            raise ValueError("Mapping and corrections must be objects")
+        table = read_table(file.filename or "upload.csv", data, sheet)
+        return data, table, mapped, edits
+    except (ValueError, UnicodeError, TypeError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.post("/api/imports/preview")
+async def import_preview(db: DB, file: UploadFile = File(...), mapping: str = Form("{}"), corrections: str = Form("{}"), sheet: str = Form("")):
+    data, table, mapped, edits = await reviewed_file(file, mapping, corrections, sheet)
+    result = dict(headers=table["headers"], rows=[dict(source_row=i, values=dict(zip(table["headers"], row))) for i, row in enumerate(table["rows"][:200], 2)],
+                  row_count=len(table["rows"]), sheets=table["sheets"], sheet=table["sheet"], mapping=mapped or table["suggested"], fields=FIELDS, required=REQUIRED)
+    try:
+        result.update(preview(db, file.filename or "upload.csv", data, table, mapped, edits))
+    except ValueError as exc:
+        result["validation_error"] = str(exc)
+    return result
+
+
+@app.post("/api/imports/commit")
+async def import_commit(db: DB, file: UploadFile = File(...), mapping: str = Form("{}"), corrections: str = Form("{}"), sheet: str = Form("")):
+    data, table, mapped, edits = await reviewed_file(file, mapping, corrections, sheet)
+    try:
+        summary = import_table(db, file.filename or "upload.csv", data, table, mapped, edits)
+        previous = db.scalar(select(Run).order_by(Run.created_at.desc()).limit(1))
+        run = evaluate(db, MandateInput(**previous.result["mandate"]) if previous else MandateInput())
+        db.commit()
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(422, str(exc)) from exc
+    return {"summary": summary, "result": run.result}
+
+
+@app.get("/api/runs/{run_id}/comparison.xlsx")
+def export_comparison(run_id: str, db: DB):
+    run = db.get(Run, run_id)
+    if not run:
+        raise HTTPException(404, "Evaluation not found")
+    return Response(comparison_xlsx(run.result), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": f'attachment; filename="manager-comparison-{run_id}.xlsx"'})
+
+
+@app.get("/api/runs/{run_id}/memo.docx")
+def export_memo(run_id: str, db: DB, memo_id: str | None = None):
+    run = db.get(Run, run_id)
+    if not run:
+        raise HTTPException(404, "Evaluation not found")
+    memo = db.get(Memo, memo_id) if memo_id else None
+    if memo_id and (not memo or memo.run_id != run_id):
+        raise HTTPException(404, "Memo does not belong to this evaluation")
+    payload = memo.structured_sections if memo else briefing_sections(run.result)
+    metadata = memo.model_metadata if memo else {"provider": "Deterministic rules-based briefing"}
+    evidence = {e.id: e for e in db.scalars(select(Evidence).where(Evidence.run_id == run_id))}
+    return Response(memo_docx(run.result, payload, metadata, evidence), media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers={"Content-Disposition": f'attachment; filename="committee-memo-{run_id}.docx"'})
 
 
 @app.get("/api/data-health")
@@ -174,10 +240,22 @@ def source_row(upload_id: str, row: int, db: DB):
     upload = db.get(Upload, upload_id)
     if not upload:
         raise HTTPException(404, "Upload not found")
-    rows = list(csv.reader(StringIO(upload.raw_csv)))
+    metadata = upload.source_metadata or {}
+    rows = list(csv.reader(StringIO(metadata.get("original_table", upload.raw_csv))))
     if row < 2 or row > len(rows):
         raise HTTPException(404, "Source row not found")
-    return {"filename": upload.filename, "sha256": upload.sha256, "source_row": row, "headers": rows[0], "values": rows[row - 1]}
+    return {"filename": upload.filename, "sha256": metadata.get("original_sha256", upload.sha256), "source_row": row, "headers": rows[0], "values": rows[row - 1], "sheet": metadata.get("sheet"), "mapping": metadata.get("mapping"), "corrections": metadata.get("corrections", {}).get(str(row), {})}
+
+
+@app.get("/api/uploads/{upload_id}/original")
+def original_file(upload_id: str, db: DB):
+    upload = db.get(Upload, upload_id)
+    if not upload:
+        raise HTTPException(404, "Upload not found")
+    xlsx = upload.filename.lower().endswith(".xlsx") and upload.original_file is not None
+    return Response(upload.original_file if upload.original_file is not None else upload.raw_csv.encode(),
+                    media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" if xlsx else "text/csv",
+                    headers={"Content-Disposition": f'attachment; filename="original-{upload_id}.{"xlsx" if xlsx else "csv"}"'})
 
 
 @app.get("/api/demo.csv")

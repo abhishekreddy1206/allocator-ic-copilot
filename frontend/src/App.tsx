@@ -48,6 +48,8 @@ import type {
   Claim,
 } from "./types";
 
+import ImportWizard from "./ImportWizard";
+
 const pages = [
   "Overview",
   "Data Health",
@@ -95,6 +97,7 @@ function Empty({ text }: { text: string }) {
 }
 
 export default function App() {
+  const [importFile, setImportFile] = useState<File | null>(null);
   const [page, setPage] = useState<Page>("Overview"),
     [run, setRun] = useState<Run | null>(null),
     [draft, setDraft] = useState<Mandate | null>(null),
@@ -243,23 +246,6 @@ export default function App() {
       );
     });
   }
-  async function upload(files: FileList | null) {
-    if (!files?.length) return;
-    await action("Validating CSVs", async () => {
-      const body = new FormData();
-      Array.from(files).forEach((f) => body.append("files", f));
-      const r = await api<{ result: Run }>("/uploads", {
-        method: "POST",
-        body,
-      });
-      accept(r.result);
-      setHealth(await api<Health>("/data-health"));
-      setPage("Data Health");
-      setNotice(
-        "Upload processed. Inspect rejected rows and normalization actions below.",
-      );
-    });
-  }
   async function generate(kind: string) {
     if (!run) return;
     await action(
@@ -396,14 +382,13 @@ export default function App() {
               <span /> Evidence connected
             </span>
             <label className={`button small ${busy ? "disabled" : ""}`}>
-              <Upload size={14} /> Import CSV
+              <Upload size={14} /> Import Excel / CSV
               <input
                 type="file"
-                accept=".csv"
-                multiple
+                accept=".csv,.xlsx"
                 disabled={!!busy}
                 onChange={(e) => {
-                  void upload(e.target.files);
+                  setImportFile(e.target.files?.[0] || null);
                   e.target.value = "";
                 }}
               />
@@ -690,14 +675,27 @@ export default function App() {
                       <div>
                         <h2>Ingestion ledger</h2>
                         <p>
-                          Original CSVs retained with SHA-256. Duplicates never
-                          double-count returns.
+                          Original files and reviewed corrections retained.
+                          Duplicates never double-count returns.
                         </p>
                       </div>
                       <a className="button small" href="/api/demo.csv">
                         <Download size={14} /> Sample CSV
                       </a>
                     </div>
+                    <details className="source-downloads">
+                      <summary>Download original uploaded files</summary>
+                      {health.uploads.map((u) => (
+                        <p key={u.upload_id}>
+                          <a
+                            className="text-link"
+                            href={`/api/uploads/${u.upload_id}/original`}
+                          >
+                            {u.filename}
+                          </a>
+                        </p>
+                      ))}
+                    </details>
                     <div className="category-chips">
                       {Object.entries(health.categories).map(([k, v]) => (
                         <button
@@ -1014,6 +1012,18 @@ export default function App() {
               )}
               {page === "Shortlist" && (
                 <>
+                  <div className="memo-toolbar">
+                    <p>
+                      Passes configured constraints means ready for further
+                      diligence, not an allocation decision.
+                    </p>
+                    <a
+                      className="button"
+                      href={`/api/runs/${run.run_id}/comparison.xlsx`}
+                    >
+                      <Download size={15} /> Export comparison Excel
+                    </a>
+                  </div>
                   <div className="shortlist-grid">
                     {top.map((f) => (
                       <div className="panel shortlist-card" key={f.id}>
@@ -1027,6 +1037,7 @@ export default function App() {
                         <p className="muted">
                           {f.strategy} · {f.liquidity}
                         </p>
+                        <Suitability fund={f} openEvidence={openEvidence} />
                         <div className="shortlist-score">
                           <strong>{num(f.total_score, 1)}</strong>
                           <span>TRANSPARENT SCORE / 100</span>
@@ -1095,6 +1106,12 @@ export default function App() {
                       >
                         <Scale size={15} /> Challenge Recommendation
                       </button>
+                      <a
+                        className="button"
+                        href={`/api/runs/${run.run_id}/memo.docx${memo ? `?memo_id=${memo.id}` : ""}`}
+                      >
+                        <Download size={15} /> Export editable Word memo
+                      </a>
                       {memo && (
                         <button
                           className="button"
@@ -1248,6 +1265,20 @@ export default function App() {
           </footer>
         </div>
       </main>
+      {importFile && (
+        <ImportWizard
+          file={importFile}
+          close={() => setImportFile(null)}
+          imported={async (r) => {
+            accept(r);
+            setHealth(await api<Health>("/data-health"));
+            navigate("Data Health");
+            setNotice(
+              "Reviewed import saved. Original file and corrections are retained in the evidence trail.",
+            );
+          }}
+        />
+      )}
       {selected && (
         <div className="overlay" onClick={() => setSelected(null)}>
           <div
@@ -1264,6 +1295,7 @@ export default function App() {
             >
               <X />
             </button>
+            <Suitability fund={selected} openEvidence={openEvidence} />
             <div className="eyebrow">
               {selected.synthetic ? "SYNTHETIC MANAGER" : "UPLOADED MANAGER"} /
               VERIFIED ANALYTICS
@@ -1986,7 +2018,7 @@ function EvidenceDrawer({
             className="button"
             onClick={() => openRow(sourceId, sourceRow)}
           >
-            View original CSV row {sourceRow}
+            View original source row {sourceRow}
           </button>
         )}
         {sourceRows.length > 0 && (
@@ -2032,6 +2064,68 @@ function EvidenceDrawer({
             </div>
           )}
       </div>
+    </div>
+  );
+}
+
+function Suitability({
+  fund,
+  openEvidence,
+}: {
+  fund: Fund;
+  openEvidence: (id: string) => Promise<void>;
+}) {
+  const summary = fund.suitability;
+  if (!summary)
+    return (
+      <p className="footnote">
+        Reevaluate the mandate to load the suitability explanation.
+      </p>
+    );
+  return (
+    <div className="suitability">
+      <strong>{summary.headline}</strong>
+      {!!summary.strengths.length && (
+        <>
+          <h3>Why it fits</h3>
+          {summary.strengths.map((c, i) => (
+            <p key={i}>
+              {c.text}{" "}
+              <button
+                className="text-link"
+                onClick={() => void openEvidence(c.evidence_ids[0])}
+              >
+                Evidence
+              </button>
+            </p>
+          ))}
+        </>
+      )}
+      {!!summary.concerns.length && (
+        <>
+          <h3>Concerns to review</h3>
+          {summary.concerns.map((c, i) => (
+            <p key={i}>
+              {c.text}{" "}
+              <button
+                className="text-link"
+                onClick={() => void openEvidence(c.evidence_ids[0])}
+              >
+                Evidence
+              </button>
+            </p>
+          ))}
+        </>
+      )}
+      {!!summary.missing_evidence.length && (
+        <>
+          <h3>Data to inspect</h3>
+          {summary.missing_evidence.map((text) => (
+            <p key={text}>{text}</p>
+          ))}
+        </>
+      )}
+      <p className="footnote">Next step: {summary.next_step}</p>
     </div>
   );
 }

@@ -1747,3 +1747,111 @@ tr[tabindex]:hover {
     font-size: 6pt;
   }
 }
+
+.import-dialog {
+  position: relative;
+  width: min(1120px, 95vw);
+  max-height: 94vh;
+  overflow: auto;
+  margin: auto;
+  background: #fafbf7;
+  padding: 38px;
+  border-radius: 8px;
+}
+.import-dialog h1 {
+  font-size: 32px;
+  margin: 8px 0;
+}
+.import-dialog h2 {
+  font-size: 21px;
+  margin: 28px 0 12px;
+}
+.mapping-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+.mapping-grid label,
+.import-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+.mapping-grid select,
+.import-sheet select {
+  padding: 10px;
+  border: 1px solid #d8ded4;
+  border-radius: 4px;
+  background: white;
+}
+.import-table input {
+  width: 180px;
+  padding: 8px;
+  border: 1px solid #d8ded4;
+  border-radius: 3px;
+  background: white;
+}
+.import-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+  background: #edf2e8;
+  margin: 18px 0;
+}
+.import-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0;
+  font-size: 12px;
+}
+.import-issues {
+  max-height: 200px;
+  overflow: auto;
+  font-size: 13px;
+  margin: 20px 0;
+}
+.import-issues p {
+  margin: 8px 0;
+}
+.import-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+}
+.import-confirm input {
+  margin-top: 4px;
+}
+.suitability {
+  padding: 16px 0;
+  border-bottom: 1px solid #e2e6dd;
+  margin-bottom: 18px;
+}
+.suitability h3 {
+  font: 600 12px sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 16px 0 8px;
+  color: #53685d;
+}
+.suitability p {
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 8px 0;
+}
+.suitability .text-link {
+  display: inline;
+  font-size: 11px;
+}
+@media (max-width: 600px) {
+  .import-dialog {
+    padding: 22px 16px;
+  }
+  .import-pagination {
+    flex-wrap: wrap;
+  }
+}

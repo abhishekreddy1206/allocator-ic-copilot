@@ -82,9 +82,12 @@ def evaluate(session: Session, mandate: MandateInput, previous_run_id: str | Non
         by_fund.setdefault(r.fund_id, []).append(r)
     uploads = {u.id: u for u in session.scalars(select(Upload))}
     dq_counts = {}
+    unresolved_counts = {}
     for issue in session.scalars(select(DataQualityIssue)):
         if issue.fund_id:
             dq_counts[issue.fund_id] = dq_counts.get(issue.fund_id, 0) + 1
+            if issue.status == "open" and issue.severity in {"error", "warning"}:
+                unresolved_counts[issue.fund_id] = unresolved_counts.get(issue.fund_id, 0) + 1
     raw_funds = []
     demo_hash = hashlib.sha256(demo_csv().encode()).hexdigest()
     for f in session.scalars(select(Fund).order_by(Fund.id)):
@@ -122,7 +125,8 @@ def evaluate(session: Session, mandate: MandateInput, previous_run_id: str | Non
             ),
             diversification={s: compute_metrics(r, b, rf)["benchmark_correlation"] for s, b in ss["benchmarks"].items()},
             data_quality_flags=dq_counts.get(f.id, 0),
-            synthetic=uploads[f.source_file].sha256 == demo_hash,
+            unresolved_data_quality=unresolved_counts.get(f.id, 0),
+            synthetic=(uploads[f.source_file].source_metadata or {}).get("original_sha256", uploads[f.source_file].sha256) == demo_hash,
         )
         raw_funds.append(fund)
     params = mandate.model_dump()
@@ -232,6 +236,9 @@ def evaluate(session: Session, mandate: MandateInput, previous_run_id: str | Non
                     fund_id=f["id"], run_id=run.id, factor_name=name, beta=beta, t_stat=f["factors"]["t_stats"][name], methodology_metadata=f["factors"]
                 )
             )
+    from app.suitability import suitability
+    for f in ranked:
+        f["suitability"] = suitability(f, params)
     previous = session.get(Run, previous_run_id) if previous_run_id else None
     if previous_run_id and previous is None:
         raise ValueError("Previous evaluation does not exist")
