@@ -1,6 +1,18 @@
+# Local credentials (the checked-in template is intentionally retained).
 .env
 .env.*
 !.env.example
+
+# OS/editor temporary files.
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+~$*
+*.swp
+*.swo
+
+# Dependencies, builds and test caches.
 .venv/
 __pycache__/
 .pytest_cache/
@@ -9,6 +21,22 @@ __pycache__/
 node_modules/
 frontend/dist/
 .coverage
+.coverage.*
+htmlcov/
 playwright-report/
 test-results/
 *.tsbuildinfo
+
+# Local run outputs and private datasets. Reviewed docs/examples stay tracked.
+/artifacts/
+/exports/
+/uploads/
+/local-data/
+/backups/
+/pgdata/
+*.log
+
+# Downloaded inference weights belong in the runtime cache, not this repository.
+.ollama/
+*.gguf
+*.safetensors

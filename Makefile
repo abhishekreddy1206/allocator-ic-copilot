@@ -1,8 +1,18 @@
-.PHONY: up demo test build lint
+.PHONY: up up-local demo smoke smoke-ai acceptance test build lint
 up:
 	docker compose up --build -d
+up-local:
+	docker compose -f compose.yaml -f compose.ollama.yaml up --build -d --wait
 demo:
 	curl --fail -X POST http://localhost:8000/api/demo
+smoke:
+	docker compose exec -T backend python scripts/smoke_demo.py
+smoke-ai:
+	docker compose exec -T backend python scripts/smoke_demo.py --ai
+acceptance:
+	docker compose exec -T backend python scripts/smoke_demo.py --ai --output-dir /tmp/live-ai-acceptance
+	mkdir -p artifacts/live-ai-acceptance
+	docker compose cp backend:/tmp/live-ai-acceptance/. artifacts/live-ai-acceptance/
 test:
 	docker compose exec backend pytest -q
 build:

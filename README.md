@@ -13,11 +13,21 @@ With Docker Desktop running:
 ```sh
 git clone https://github.com/abhishekreddy1206/allocator-ic-copilot.git
 cd allocator-ic-copilot
-cp .env.example .env
+[ -f .env ] || cp .env.example .env
 docker compose up --build -d
 ```
 
 Open [http://localhost:5173](http://localhost:5173). The database migrates and the demo seeds automatically. No API key is required for analytics, ranking, evidence, or the rules-based briefing. For AI memo/challenge features, set `OPENAI_API_KEY` in your local `.env` using a funded OpenAI API project, then run `docker compose up -d --force-recreate backend`. Keep `.env` private.
+
+For the verified local AI setup, follow the next section or [SETUP.md](SETUP.md). Presentation walkthrough: [PRESENTATION_GUIDE.md](PRESENTATION_GUIDE.md).
+
+| Run mode | AI provider | Financial inputs at startup |
+| --- | --- | --- |
+| Default demo without a key | Rules-based briefing; no LLM generation | Synthetic managers and synthetic market fixtures |
+| `make up-local` | Qwen 2.5 through local Ollama; no API credits | The same synthetic demo inputs |
+| OpenAI configured and funded | OpenAI Responses API | The same synthetic demo inputs |
+
+AI provider selection and public market refresh are separate. The October 11 acceptance used real **local model inference** with **synthetic financial inputs**; it did not refresh public market sources or call OpenAI/Meta.
 
 ### Local AI without API credits
 
@@ -27,13 +37,13 @@ Install [Ollama](https://ollama.com/download), start its local server, and pull 
 ollama serve
 # In a second terminal:
 ollama pull qwen2.5:3b-instruct-q4_K_M
-docker compose -f compose.yaml -f compose.ollama.yaml up --build -d
-docker compose exec backend python scripts/smoke_demo.py --ai --output-dir /tmp/live-ai-acceptance
+make up-local
+make acceptance
 ```
 
-Ollama runs the open-weight model on your own hardware; no OpenAI key or API credit is required for this mode. Keep the server running during generation. Docker Desktop reaches it at `host.docker.internal:11434`; when running Python directly on the host, set `OLLAMA_BASE_URL=http://localhost:11434`. Set `OLLAMA_MODEL` to use another installed model. Local inference speed and quality depend on the machine and model. On Linux, configure the host gateway/runtime address for Docker rather than assuming Docker Desktop networking.
+Ollama runs the open-weight model on your own hardware; no OpenAI key or API credit is required for this mode. Keep the server running during generation. If Ollama is already running, skip `ollama serve`. Docker Desktop reaches it at `host.docker.internal:11434`; when running Python directly on the host, set `OLLAMA_BASE_URL=http://localhost:11434`. Set `OLLAMA_MODEL` to use another installed model. Local inference speed and quality depend on the machine and model. On Linux, configure the host gateway/runtime address for Docker rather than assuming Docker Desktop networking. Use `make up-local` for subsequent rebuilds: plain `make up` uses the default configuration and can switch the backend back to OpenAI.
 
-The local provider uses the same application output contract, recommendation consistency checks, evidence validation and software-owned financial facts. Its generation schema further constrains sections and citations. Memo interpretation covers source notes/liquidity for up to three eligible managers and one excluded alternative; challenge mode focuses on the engine leader. Quantitative/factor analysis remains software-rendered. Model-facing identity/citation handles map back to exact stored IDs before validation; the synthetic demo marker is separated from the note's investment content without modifying stored sources. Optional `--output-dir` retains actual generated JSON and compact/full-evidence Word exports inside the backend container; use `docker compose cp` to copy those artifacts out. The script verifies persisted payloads and evaluation-owned citations, not just an HTTP success.
+The local provider uses the same application output contract, recommendation consistency checks, evidence validation and software-owned financial facts. Its generation schema further constrains sections and citations. Memo interpretation covers source notes/liquidity for up to three eligible managers and one excluded alternative; challenge mode focuses on the engine leader's source note. Quantitative/factor analysis remains software-rendered. Model-facing identity/citation handles map back to exact stored IDs before validation; the synthetic demo marker is separated from the note's investment content without modifying stored sources. `make acceptance` saves generated JSON and compact/full-evidence Word exports to ignored `artifacts/live-ai-acceptance/`. It verifies persisted payloads and evaluation-owned citations, not just an HTTP success. Acceptance restores the synthetic demo mandate/market fixtures, preserves uploads and prior runs, and requires the documented 18-manager universe.
 
 Actual local-model acceptance passed on October 11: 20 saved memo claims and six challenge claims, with persisted payload and citation checks. The reviewed [AI memo example](docs/examples/ai-memo.docx) is two pages; the [challenge example](docs/examples/ai-challenge.docx) is one page. See [REVIEW.md](REVIEW.md) for scope, actual run IDs, browser verification and remaining limitations.
 
@@ -84,6 +94,8 @@ docker compose exec backend python scripts/smoke_demo.py
 docker compose exec backend python scripts/smoke_demo.py --refresh --ai
 ```
 
+`--refresh` checks public retrieval before the script restores the synthetic demo for its fixed assertions. Consequently, its subsequent AI memo still uses demo market inputs. To generate a memo against freshly fetched market observations, use **Refresh public data** in the UI, inspect per-source status, then generate the memo without clicking **Load demo**.
+
 ## Architecture
 
 ```mermaid
@@ -132,7 +144,7 @@ PostgreSQL persists raw uploads and digests, funds, monthly observations, issues
 7. Apply hard gates; score only eligible managers with visible preferences and fixed scales.
 8. Snapshot source values, methods and observations into evaluation-scoped evidence. Evaluation reads use PostgreSQL repeatable-read isolation.
 9. Show structured differences from the previous evaluation. Memo context refreshes when a run changes. Artifacts are persisted against their original run.
-10. Optionally interpret selected evidence with Responses structured output; validate before persistence. Failures preserve all upstream results.
+10. Optionally interpret selected evidence with local Ollama or OpenAI structured output; validate before persistence. Failures preserve all upstream results.
 
 ### CSV contract
 
@@ -254,7 +266,7 @@ The official OpenAI Python SDK calls **Responses API** `responses.parse` with Py
 
 Alternatively, `AI_PROVIDER=ollama` calls the local `/api/chat` endpoint with the Pydantic JSON schema and validates the response through the same application rules. [Ollama structured outputs](https://docs.ollama.com/capabilities/structured-outputs). No automatic provider switch sends data elsewhere; provider selection is explicit. The UI's availability flag means a provider is configured, not that its runtime, credit balance or model is healthy.
 
-The model sees the mandate, engine leader, eligible candidates/selected exclusions, verified metrics, factors, regimes, source notes, evidence values and allowed IDs. Source notes are untrusted data. Output identifies a known fund and provides interpretations/questions with citations and confidence labels. Challenge mode also receives the existing AI memo when available.
+The OpenAI provider sees the mandate, engine leader, eligible candidates/selected exclusions, verified metrics, factors, regimes, source notes, evidence values and allowed IDs. Local Ollama receives the bounded note-based context described above. Source notes are untrusted data. Output identifies a known fund and provides interpretations/questions with citations and confidence labels. Challenge mode also receives prior AI interpretation when available.
 
 Validation rejects unknown funds, invalid citations, cross-fund evidence, an ineligible/nonleader recommendation, missing required sections, and numeric/eligibility/rank/recommendation prose. Unapproved proper names in prose are rejected conservatively. Model prose deliberately excludes quantitative assertions; deterministic templates supply quantitative facts, mandate constraints, shortlist positions and source appendix. A rejected output gets one validation-feedback retry. AI failure preserves the evaluation and briefing. No-key functionality never fabricates a live AI answer.
 
@@ -276,7 +288,7 @@ AI does not:
 Prerequisites: Docker Desktop / Docker Engine with Compose, available ports 5173 and 8000, and network access for initial dependency/image downloads.
 
 ```sh
-cp .env.example .env
+[ -f .env ] || cp .env.example .env
 docker compose up --build
 ```
 
@@ -322,7 +334,11 @@ docker compose exec backend python scripts/smoke_demo.py
 
 Backend tests cover hand-verifiable growth, volatility, Sharpe, Sortino, initial wealth/drawdown, Calmar, beta/correlation, tracking error, information/capture ratios, exact alignment, zero denominators, known-coefficient OLS, singularity, insufficient data, regimes, normalization, duplicates/conflicts/gaps, all hard gates, eligible-only stable ranking, weight effects, provider success/fallback, AI citation/identity/numeric validation and retry, PostgreSQL persistence, full demo transitions and no-key/API failure isolation.
 
-Database tests create an isolated private PostgreSQL schema per test and clean only that schema; application data is preserved. Frontend checks include strict TypeScript, ESLint, production build and manual browser verification. `REVIEW.md` records actual results and limitations. `--ai` makes real billable calls; ordinary tests never require external services or a key.
+Database tests create an isolated private PostgreSQL schema per test and clean only that schema; application data is preserved. Frontend checks include strict TypeScript, ESLint, production build and manual browser verification. `REVIEW.md` records actual results and limitations. `--ai` invokes the configured real model: local inference with Ollama or potentially billable API calls with OpenAI. Ordinary tests never require external services or a key.
+
+## Repository hygiene
+
+Keep local credentials in ignored `.env` files; `.env.example` is the tracked template. Use ignored `uploads/` or `local-data/` for private input files and `artifacts/` or `exports/` for generated outputs. Docker database volumes and local model weights are runtime state, not deliverables. OS metadata, caches and downloaded weights are ignored. The synthetic CSV fixture, reviewed screenshots and curated Word examples in `docs/examples/` remain intentionally tracked; do not blanket-ignore CSV, XLSX, DOCX or migration SQL files.
 
 ## Known Limitations
 
