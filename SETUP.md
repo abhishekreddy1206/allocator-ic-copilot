@@ -2,6 +2,8 @@
 
 The verified AI workflow uses Qwen 2.5 locally through Ollama. The bundled manager histories and startup market fixtures are synthetic. Public market retrieval is a separate action.
 
+This document owns installation, configuration, verification commands and troubleshooting. For the product and architecture, see [README.md](README.md); for the timed walkthrough, see [PRESENTATION_GUIDE.md](PRESENTATION_GUIDE.md).
+
 ## Prerequisites
 
 - Docker Desktop with Docker Compose running; ports 5173 and 8000 available.
@@ -63,7 +65,23 @@ Acceptance restores synthetic market fixtures and the baseline mandate, retains 
 
 For browser verification, open IC Memo, generate an AI memo, generate the challenge, and click an evidence marker. Source-field citations can open the original uploaded row. The availability flag means a provider is configured; generation itself establishes whether the server/model is working.
 
-The October 11 run saved a 20-claim memo and six-claim challenge, with citations checked. Its reviewed compact Word memo was two pages and challenge one page. [REVIEW.md](REVIEW.md) records the exact evaluation IDs and qualifications; the curated examples in `docs/examples/` are intentionally tracked snapshots, not new-run artifacts.
+Expected acceptance output includes successful baseline/mandate transitions, resolved briefing citations, live memo and challenge counts, and `Demo journey passed`. Claim counts can vary with provider/model output; do not treat a specific count as a universal requirement. [REVIEW.md](REVIEW.md) records actual results and evaluation IDs. Curated examples in `docs/examples/` are tracked snapshots; `make acceptance` creates fresh local artifacts.
+
+## Backend and frontend development
+
+Use Python 3.12 and Node 22.13 or later. Docker supplies supported runtimes for the normal application startup.
+
+```sh
+python3.12 -m venv .venv
+.venv/bin/pip install -r backend/requirements.lock
+cd frontend
+npm ci
+npm run dev
+```
+
+The Vite dev server proxies `/api` to localhost:8000. Keep the Compose backend/database running, or configure `DATABASE_URL` for a development PostgreSQL when running the backend separately. For a different proxy destination, set `API_PROXY` when starting Vite. There is no SQLite fallback. In host-based local AI development, use `OLLAMA_BASE_URL=http://localhost:11434`.
+
+Startup runs Alembic, seeds the synthetic dataset idempotently and creates an evaluation. `SEED_DEMO=false` disables automatic manager loading; `make demo` or `./scripts/seed-demo.sh` loads it explicitly. PostgreSQL state persists in the Docker volume.
 
 ## Use public market observations
 
@@ -89,3 +107,5 @@ OpenAI remains supported. Configure `AI_PROVIDER=openai`, `OPENAI_API_KEY` and o
 Stop application containers with `docker compose down`; saved data remains in the Docker volume. Stop a foreground Ollama server with Ctrl+C when finished. A Docker service restart does not start Ollama on the host.
 
 Keep private input files in ignored `uploads/` or `local-data/`; put local exports in ignored `exports/` or `artifacts/`. Follow [README.md](README.md) for supported import formats, limitations and architecture, and [PRESENTATION_GUIDE.md](PRESENTATION_GUIDE.md) for the demo narrative.
+
+The tracked `.env.example` is a template. Preserve an existing `.env` when following setup commands. OS metadata, dependency/build/test caches, local artifact/data directories and model weights are ignored. Synthetic fixtures, reviewed screenshots, curated `docs/examples/` documents and migration SQL are intentionally tracked; avoid blanket ignores for CSV, XLSX, DOCX or SQL files.

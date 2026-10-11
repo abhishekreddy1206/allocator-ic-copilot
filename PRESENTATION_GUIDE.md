@@ -2,6 +2,8 @@
 
 Prepared October 11, 2026. This guide compares the implementation with Option B: Allocator Memo Builder (IC Draft + Audit Trail). It reflects source inspection and the actual October 11 local-model acceptance recorded in REVIEW.md. Public market providers were not rechecked for this guide.
 
+This document owns the presentation narrative and timed walkthrough. Use [SETUP.md](SETUP.md) to install, configure and verify the app beforehand; [README.md](README.md) explains the product and architecture.
+
 ## Start with the problem
 
 An allocator selects investment managers. An investment committee (IC) reviews the proposed decision. A mandate is the set of constraints that the selection must satisfy.
@@ -12,6 +14,14 @@ Use this opening:
 
 The value is less manual reconciliation, clearer reasons for exclusions, and faster verification of the resulting draft. We have not measured time savings or conducted a finance-user usability study.
 
+## Prepare the demonstration
+
+1. Start the app and, for actual AI generation, its local model using [SETUP.md](SETUP.md). Keep the model running and rehearse generation time before presenting.
+2. Use **Load demo** and inspect Data Health/source status. A clean seeded universe contains 18 managers and 1,007 accepted observations. Uploaded files and previous runs are retained, so additional imported managers can change the demonstration counts.
+3. Confirm the baseline mandate: **Diversifier**, **SPY**, **quarterly liquidity**, **15% drawdown tolerance**, **10% target volatility**, **25% maximum volatility**, **36 months minimum history**, **maximum benchmark correlation 0.40**, and no strategy exclusions.
+4. Rehearse the change to **7% drawdown**, then **monthly liquidity**. The documented synthetic universe moves from **7 → 5 → 4** eligible managers. Atlas fails the tighter drawdown gate at approximately −9.5%; Orion fails monthly liquidity. The leader need not change: the eligible candidate set does.
+5. Decide whether to demonstrate synthetic fixtures or a public-data refresh. Refreshing changes market inputs and can change rankings/eligibility; do not promise the synthetic baseline counts after refreshing. If showing both, finish the deterministic walkthrough first, then refresh and state the actual per-source status.
+
 ## A seven-minute presentation
 
 | Time | Show | Explain |
@@ -19,7 +29,7 @@ The value is less manual reconciliation, clearer reasons for exclusions, and fas
 | 0:00–0:45 | Problem and Overview | Define allocator, mandate and IC. Explain the workflow before discussing technology. The bundled 18-manager universe is synthetic. |
 | 0:45–1:45 | Import Excel / CSV and Data Health | Show column mapping and validation preview. Explain missing values, duplicates, conflicting IDs, return units and gaps. Valid rows can remain usable while invalid rows are quarantined. Original files and corrections are retained. |
 | 1:45–2:30 | Market source status and Universe | Explain return, volatility, drawdown, Sharpe and benchmark correlation in plain language. Refresh public sources if appropriate and report their actual status. Startup fixtures are synthetic; failed providers explicitly fall back to synthetic fixtures. |
-| 2:30–3:45 | Decision Room | Load demo to establish the documented baseline. Start with quarterly liquidity and 15% drawdown tolerance. Tighten drawdown to 7%: eligible managers fall from 7 to 5. Change liquidity to monthly: 5 becomes 4. Explain that strong performance does not override a failed mandate. |
+| 2:30–3:45 | Decision Room | Apply the prepared drawdown and liquidity changes. Point to Atlas and Orion's exact exclusion reasons. Explain that strong performance does not override a failed mandate. |
 | 3:45–4:30 | Shortlist and one manager | Show suitability explanations, score contributions, source concerns and missing analyses. Rankings are deterministic policy outputs, not predictions. |
 | 4:30–5:45 | IC Memo and evidence drawer | Generate a real AI memo with local Ollama, or use the explicitly labeled rules-based briefing. Click a metric citation, then a source-field citation. Show method, period and original row. A source note is traceable but remains unverified. |
 | 5:45–6:15 | Excel and Word exports | Explain that exports are saved evaluation snapshots. Changes in Word or Excel do not sync back into the app. |
@@ -28,8 +38,6 @@ The value is less manual reconciliation, clearer reasons for exclusions, and fas
 Use this sentence during the constraint change:
 
 > The question is not just which manager performed best. It is which managers meet this mandate, and what evidence supports advancing them for diligence.
-
-Demo preparation: use Load demo, inspect source status, and rehearse the 7 → 5 → 4 transition. Live refresh changes market inputs and can change rankings or eligibility, so do not promise the synthetic baseline counts after refreshing. Additional user imports are retained by Load demo and can also alter the candidate set. Identify the dataset actually present before presenting those counts.
 
 Do not represent a rules-based briefing as LLM output. Real memo and challenge generation passed using local Qwen 2.5 through Ollama on October 11. The OpenAI provider still requires funded API access; its last request failed with exhausted project credit. Keep Ollama running and use the local Compose override for this demonstration. A configured provider alone does not establish runtime availability.
 
@@ -75,4 +83,4 @@ Do not represent a rules-based briefing as LLM output. Real memo and challenge g
 3. Document the deterministic-ranking/LLM-rationale split as an explicit interpretation of the brief; seek clarification only if the evaluator requires LLM-owned ranking.
 4. Treat summary-stat-only ingestion and richer UI strategy preferences as remaining input/UI scope, not features already delivered.
 
-Supporting documents: [README.md](README.md), [DATA_SOURCES.md](DATA_SOURCES.md), [ARCHITECTURE.md](ARCHITECTURE.md), [REVIEW.md](REVIEW.md).
+Supporting documents: [README.md](README.md), [SETUP.md](SETUP.md), [DATA_SOURCES.md](DATA_SOURCES.md), [ARCHITECTURE.md](ARCHITECTURE.md), [REVIEW.md](REVIEW.md).

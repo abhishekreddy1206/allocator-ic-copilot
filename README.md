@@ -17,37 +17,11 @@ cd allocator-ic-copilot
 docker compose up --build -d
 ```
 
-Open [http://localhost:5173](http://localhost:5173). The database migrates and the demo seeds automatically. No API key is required for analytics, ranking, evidence, or the rules-based briefing. For AI memo/challenge features, set `OPENAI_API_KEY` in your local `.env` using a funded OpenAI API project, then run `docker compose up -d --force-recreate backend`. Keep `.env` private.
+Open [http://localhost:5173](http://localhost:5173). The database migrates and the synthetic dataset seeds automatically. No API key is required for analytics, ranking, evidence, or the rules-based briefing.
 
-For the verified local AI setup, follow the next section or [SETUP.md](SETUP.md). Presentation walkthrough: [PRESENTATION_GUIDE.md](PRESENTATION_GUIDE.md).
+Local AI is available through Ollama with `qwen2.5:3b-instruct-q4_K_M`; OpenAI remains an optional hosted provider. AI provider selection and public market refresh are separate. The verified October 11 run used actual local inference with synthetic manager and market inputs.
 
-| Run mode | AI provider | Financial inputs at startup |
-| --- | --- | --- |
-| Default demo without a key | Rules-based briefing; no LLM generation | Synthetic managers and synthetic market fixtures |
-| `make up-local` | Qwen 2.5 through local Ollama; no API credits | The same synthetic demo inputs |
-| OpenAI configured and funded | OpenAI Responses API | The same synthetic demo inputs |
-
-AI provider selection and public market refresh are separate. The October 11 acceptance used real **local model inference** with **synthetic financial inputs**; it did not refresh public market sources or call OpenAI/Meta.
-
-### Local AI without API credits
-
-Install [Ollama](https://ollama.com/download), start its local server, and pull the model:
-
-```sh
-ollama serve
-# In a second terminal:
-ollama pull qwen2.5:3b-instruct-q4_K_M
-make up-local
-make acceptance
-```
-
-Ollama runs the open-weight model on your own hardware; no OpenAI key or API credit is required for this mode. Keep the server running during generation. If Ollama is already running, skip `ollama serve`. Docker Desktop reaches it at `host.docker.internal:11434`; when running Python directly on the host, set `OLLAMA_BASE_URL=http://localhost:11434`. Set `OLLAMA_MODEL` to use another installed model. Local inference speed and quality depend on the machine and model. On Linux, configure the host gateway/runtime address for Docker rather than assuming Docker Desktop networking. Use `make up-local` for subsequent rebuilds: plain `make up` uses the default configuration and can switch the backend back to OpenAI.
-
-The local provider uses the same application output contract, recommendation consistency checks, evidence validation and software-owned financial facts. Its generation schema further constrains sections and citations. Memo interpretation covers source notes/liquidity for up to three eligible managers and one excluded alternative; challenge mode focuses on the engine leader's source note. Quantitative/factor analysis remains software-rendered. Model-facing identity/citation handles map back to exact stored IDs before validation; the synthetic demo marker is separated from the note's investment content without modifying stored sources. `make acceptance` saves generated JSON and compact/full-evidence Word exports to ignored `artifacts/live-ai-acceptance/`. It verifies persisted payloads and evaluation-owned citations, not just an HTTP success. Acceptance restores the synthetic demo mandate/market fixtures, preserves uploads and prior runs, and requires the documented 18-manager universe.
-
-Actual local-model acceptance passed on October 11: 20 saved memo claims and six challenge claims, with persisted payload and citation checks. The reviewed [AI memo example](docs/examples/ai-memo.docx) is two pages; the [challenge example](docs/examples/ai-challenge.docx) is one page. See [REVIEW.md](REVIEW.md) for scope, actual run IDs, browser verification and remaining limitations.
-
-Run `make test` and `make lint` to verify the project. Run `docker compose exec backend python scripts/smoke_demo.py` for the reproducible mandate walkthrough. Stop the app with `docker compose down`; database contents remain in the Docker volume.
+Detailed installation, provider configuration, verification commands and troubleshooting: [SETUP.md](SETUP.md). Guided walkthrough and presentation script: [PRESENTATION_GUIDE.md](PRESENTATION_GUIDE.md).
 
 ![Allocator IC Copilot overview](docs/overview.png)
 
@@ -68,33 +42,6 @@ The interesting product problem is deciding which manager belongs in a particula
 A manager with strong returns can fail liquidity. A lower-return manager can be a better diversifier. A performance gap can prevent a defensible risk assessment. Those are explicit decisions, not LLM opinions.
 
 The minimum useful system is one Python backend, one React frontend and PostgreSQL. Small functions own compounding, regressions, hard gates and scores. Each evaluation snapshots its evidence; a memo from an earlier mandate remains auditable after the next run.
-
-## Demo
-
-Open [http://localhost:5173](http://localhost:5173). Demo data loads automatically. **Load demo** restores cached synthetic market fixtures and the initial mandate; it preserves prior evaluations and uploaded files. This makes the walkthrough repeatable even after testing public-data refresh.
-
-| Time | Action | Point to make |
-| --- | --- | --- |
-| 0:00–0:30 | Overview | Investment decision intelligence; software owns financial facts. |
-| 0:30–1:00 | Data Health | Filter Duplicate Observation, Missing Month, Normalization, Name Variant and Insufficient History. Conflicting identifiers are quarantined. |
-| 1:00–1:45 | Universe | Compare return, volatility, Sharpe, drawdown, correlation, factor R², liquidity and actual observation count. Open a manager. |
-| 1:45–3:00 | Decision Room | Diversifier / SPY / 15% permitted drawdown / 10% target vol / 36 months / quarterly / correlation ≤ .40. Tighten drawdown to **7%**: Atlas becomes ineligible at approximately −9.5%, with an exact reason. Then change liquidity to **monthly**: Orion becomes ineligible. |
-| 3:00–3:45 | Manager detail | Contrast Horizon’s equity beta with Harbor’s defensive behavior and Vector’s low correlation. Factor analysis is explanatory, not proof of alpha. |
-| 3:45–4:30 | IC Memo | Create a rules-based briefing or real AI memo. Click an evidence marker, inspect the formula and open an original CSV source row. |
-| 4:30–4:50 | Challenge Recommendation | With local Ollama or a funded OpenAI key, generate a counterargument, alternative conditions, unresolved risks and diligence questions with citations. Generation time depends on the provider. |
-| 4:50–5:00 | Architecture | Ingestion → deterministic analytics → mandate → ranking → immutable evidence → optional bounded AI. |
-
-The seeded baseline has 18 managers and 1,007 accepted observations. Expected eligibility counts are **7 → 5 → 4**. The leader need not change: the candidate set and suitability decision do. No output rank or metric is hardcoded.
-
-An executable API counterpart:
-
-```sh
-docker compose exec backend python scripts/smoke_demo.py
-# Optional: actual external requests, with live/cached status checks
-docker compose exec backend python scripts/smoke_demo.py --refresh --ai
-```
-
-`--refresh` checks public retrieval before the script restores the synthetic demo for its fixed assertions. Consequently, its subsequent AI memo still uses demo market inputs. To generate a memo against freshly fetched market observations, use **Refresh public data** in the UI, inspect per-source status, then generate the memo without clicking **Load demo**.
 
 ## Architecture
 
@@ -135,7 +82,7 @@ PostgreSQL persists raw uploads and digests, funds, monthly observations, issues
 
 ## System Data Flow
 
-1. Upload up to ten UTF-8 CSVs, each ≤8 MB and ≤50,000 rows.
+1. Import one CSV/XLSX through the reviewed UI; the legacy batch API accepts up to ten UTF-8 CSVs. Each file is limited to 8 MB and 50,000 rows.
 2. Map supported column aliases, normalize exact identifiers/case/strategy/date/units and retain original CSV bytes as decoded text plus SHA-256.
 3. Record every normalization and issue. Quarantine invalid rows, conflicting identities/metadata and conflicting observations. Identical duplicate observations are excluded. No fuzzy identity merge or zero-return imputation.
 4. Persist canonical funds and observations atomically. A malformed file header rolls back that upload batch. Row-level failures leave valid observations usable.
@@ -283,62 +230,13 @@ AI does not:
 - decide benchmark returns;
 - calculate rank scores.
 
-## Running Locally
+## Sample Data and Verification
 
-Prerequisites: Docker Desktop / Docker Engine with Compose, available ports 5173 and 8000, and network access for initial dependency/image downloads.
+The bundled dataset contains 18 fictional managers and 1,007 accepted monthly observations, including short histories, missing months, duplicates, identifier conflicts and inconsistent units. Offline market fixtures are also synthetic. The complete inventory and provenance are in [DATA_SOURCES.md](DATA_SOURCES.md).
 
-```sh
-[ -f .env ] || cp .env.example .env
-docker compose up --build
-```
+The latest verification includes 37 passing backend tests, frontend TypeScript/lint/build checks, and actual local-model memo/challenge generation with persisted payload and citation checks. The reviewed [AI memo example](docs/examples/ai-memo.docx) is two pages; the [challenge example](docs/examples/ai-challenge.docx) is one page. These are saved synthetic-data examples; their evidence IDs refer to the original local evaluation.
 
-Open [http://localhost:5173](http://localhost:5173). Backend health: [http://localhost:8000/api/health](http://localhost:8000/api/health). API schema: [http://localhost:8000/docs](http://localhost:8000/docs).
-
-Startup runs Alembic automatically, seeds the synthetic dataset idempotently and creates an initial evaluation. PostgreSQL runs through Compose with a persistent volume; no manual provisioning. `SEED_DEMO=false` disables automatic loading; `make demo` or `./scripts/seed-demo.sh` loads it explicitly.
-
-`OPENAI_API_KEY` is optional and backend-only. The default model is configurable with `OPENAI_MODEL` (default `gpt-4.1-mini`). A key requires API project access and sufficient quota; a ChatGPT subscription does not itself fund API calls. Never commit `.env`. If a key already exists locally, preserve it rather than overwriting `.env` with the example. Restart the backend after changing key/model settings.
-
-Cached mode is the startup default. Click **Refresh public data** to attempt real retrieval; it recomputes the current mandate. Click **Load demo** to restore the guaranteed synthetic walkthrough afterward.
-
-Compose serves the production frontend through nginx on 5173 and proxies `/api` to FastAPI. Database has no exposed host port. Both frontend/backend ports are intended for local development; there is no production authentication.
-
-### Backend/frontend development
-
-Use Python 3.12 and Node 22.13 or later; the Compose images supply supported runtimes.
-
-```sh
-python3.12 -m venv .venv
-.venv/bin/pip install -r backend/requirements.lock
-cd frontend
-npm ci
-npm run dev
-```
-
-The Vite dev server proxies to localhost:8000. Use the Compose backend/database or configure `DATABASE_URL` for a development PostgreSQL. For a separate dev proxy target, set `API_PROXY` when launching Vite. No SQLite fallback is implemented.
-
-## Demo Data
-
-`backend/app/demo.py` creates 18 named personas with 60-month windows, two short records, one missing month, a historical non-overlap, duplicate rows/identifier collision, percentage/decimal mixes, case/whitespace/name variants, missing optional fields, and a 36% monthly gain warning. Both manager and market generation use fixed seeds, Student-t innovations, factor mechanisms and explicit stress events. Synthetic monthly returns are treated as reported net returns; fee deductions are not applied twice.
-
-Atlas has meaningful losses; Meridian has team/key-person concerns; Cedar offers low-return diversification; Bastion fails liquidity; Nova lacks history; Horizon packages equity beta; Harbor protects downside; Summit suffers carry crashes. Scenarios are generated, not hardcoded rankings.
-
-## Testing
-
-```sh
-make test
-make lint
-make build
-# Meaningful API demo, uses current running app
-docker compose exec backend python scripts/smoke_demo.py
-```
-
-Backend tests cover hand-verifiable growth, volatility, Sharpe, Sortino, initial wealth/drawdown, Calmar, beta/correlation, tracking error, information/capture ratios, exact alignment, zero denominators, known-coefficient OLS, singularity, insufficient data, regimes, normalization, duplicates/conflicts/gaps, all hard gates, eligible-only stable ranking, weight effects, provider success/fallback, AI citation/identity/numeric validation and retry, PostgreSQL persistence, full demo transitions and no-key/API failure isolation.
-
-Database tests create an isolated private PostgreSQL schema per test and clean only that schema; application data is preserved. Frontend checks include strict TypeScript, ESLint, production build and manual browser verification. `REVIEW.md` records actual results and limitations. `--ai` invokes the configured real model: local inference with Ollama or potentially billable API calls with OpenAI. Ordinary tests never require external services or a key.
-
-## Repository hygiene
-
-Keep local credentials in ignored `.env` files; `.env.example` is the tracked template. Use ignored `uploads/` or `local-data/` for private input files and `artifacts/` or `exports/` for generated outputs. Docker database volumes and local model weights are runtime state, not deliverables. OS metadata, caches and downloaded weights are ignored. The synthetic CSV fixture, reviewed screenshots and curated Word examples in `docs/examples/` remain intentionally tracked; do not blanket-ignore CSV, XLSX, DOCX or migration SQL files.
+[REVIEW.md](REVIEW.md) records actual checks, run IDs and remaining limitations. [SETUP.md](SETUP.md) contains the commands to reproduce acceptance, export fresh artifacts and keep credentials/private data out of Git. [PRESENTATION_GUIDE.md](PRESENTATION_GUIDE.md) contains the timed demonstration and requirement assessment.
 
 ## Known Limitations
 
