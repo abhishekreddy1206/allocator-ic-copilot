@@ -19,6 +19,24 @@ docker compose up --build -d
 
 Open [http://localhost:5173](http://localhost:5173). The database migrates and the demo seeds automatically. No API key is required for analytics, ranking, evidence, or the rules-based briefing. For AI memo/challenge features, set `OPENAI_API_KEY` in your local `.env` using a funded OpenAI API project, then run `docker compose up -d --force-recreate backend`. Keep `.env` private.
 
+### Local AI without API credits
+
+Install [Ollama](https://ollama.com/download), start its local server, and pull the model:
+
+```sh
+ollama serve
+# In a second terminal:
+ollama pull qwen2.5:3b-instruct-q4_K_M
+docker compose -f compose.yaml -f compose.ollama.yaml up --build -d
+docker compose exec backend python scripts/smoke_demo.py --ai --output-dir /tmp/live-ai-acceptance
+```
+
+Ollama runs the open-weight model on your own hardware; no OpenAI key or API credit is required for this mode. Keep the server running during generation. Docker Desktop reaches it at `host.docker.internal:11434`; when running Python directly on the host, set `OLLAMA_BASE_URL=http://localhost:11434`. Set `OLLAMA_MODEL` to use another installed model. Local inference speed and quality depend on the machine and model. On Linux, configure the host gateway/runtime address for Docker rather than assuming Docker Desktop networking.
+
+The local provider uses the same application output contract, recommendation consistency checks, evidence validation and software-owned financial facts. Its generation schema further constrains sections and citations. Memo interpretation covers source notes/liquidity for up to three eligible managers and one excluded alternative; challenge mode focuses on the engine leader. Quantitative/factor analysis remains software-rendered. Model-facing identity/citation handles map back to exact stored IDs before validation; the synthetic demo marker is separated from the note's investment content without modifying stored sources. Optional `--output-dir` retains actual generated JSON and compact/full-evidence Word exports inside the backend container; use `docker compose cp` to copy those artifacts out. The script verifies persisted payloads and evaluation-owned citations, not just an HTTP success.
+
+Actual local-model acceptance passed on October 11: 20 saved memo claims and six challenge claims, with persisted payload and citation checks. The reviewed [AI memo example](docs/examples/ai-memo.docx) is two pages; the [challenge example](docs/examples/ai-challenge.docx) is one page. See [REVIEW.md](REVIEW.md) for scope, actual run IDs, browser verification and remaining limitations.
+
 Run `make test` and `make lint` to verify the project. Run `docker compose exec backend python scripts/smoke_demo.py` for the reproducible mandate walkthrough. Stop the app with `docker compose down`; database contents remain in the Docker volume.
 
 ![Allocator IC Copilot overview](docs/overview.png)
@@ -31,7 +49,7 @@ XLSX date cells and percentage-formatted numbers are recognized. Workbook formul
 
 **Shortlist** and manager details lead with a deterministic suitability explanation: configured constraints passed or failed, the largest score contributions, unverified source concerns, unavailable analyses, and unresolved data warnings/errors. Routine resolved normalization events are excluded from the action list. These explanations describe the configured policy; they do not establish investment suitability for a real portfolio. Older saved runs remain unchanged; reevaluate to add the explanation to a new snapshot.
 
-**Export comparison Excel** downloads all managers from the saved evaluation with numeric return/risk values, eligibility, rank, score, history windows, exclusion reasons, concerns, and decision evidence IDs. Filters and frozen panes support review. **Export editable Word memo** downloads the displayed saved memo, or a deterministic briefing if none exists, with numbered evidence references and an appendix. Exports are static snapshots; editing them does not update the app. Neither export calls AI or recalculates finance.
+**Export comparison Excel** downloads all managers from the saved evaluation with numeric return/risk values, eligibility, rank, score, history windows, exclusion reasons, concerns, and decision evidence IDs. Filters and frozen panes support review. **Export editable Word memo** downloads the displayed saved memo, or a deterministic briefing if none exists, with compact numbered evidence references. **Export memo with full evidence** adds detailed methods and source records after a page break. Exports are static snapshots; editing them does not update the app. Neither export calls AI or recalculates finance. Page length depends on saved content and the Word renderer; verified page counts are recorded in REVIEW.md.
 
 ## Why I Built It This Way
 
@@ -53,7 +71,7 @@ Open [http://localhost:5173](http://localhost:5173). Demo data loads automatical
 | 1:45–3:00 | Decision Room | Diversifier / SPY / 15% permitted drawdown / 10% target vol / 36 months / quarterly / correlation ≤ .40. Tighten drawdown to **7%**: Atlas becomes ineligible at approximately −9.5%, with an exact reason. Then change liquidity to **monthly**: Orion becomes ineligible. |
 | 3:00–3:45 | Manager detail | Contrast Horizon’s equity beta with Harbor’s defensive behavior and Vector’s low correlation. Factor analysis is explanatory, not proof of alpha. |
 | 3:45–4:30 | IC Memo | Create a rules-based briefing or real AI memo. Click an evidence marker, inspect the formula and open an original CSV source row. |
-| 4:30–4:50 | Challenge Recommendation | With a funded OpenAI key, generate a counterargument, alternative conditions, unresolved risks and diligence questions with citations. Without a key, AI is explicitly unavailable. |
+| 4:30–4:50 | Challenge Recommendation | With local Ollama or a funded OpenAI key, generate a counterargument, alternative conditions, unresolved risks and diligence questions with citations. Generation time depends on the provider. |
 | 4:50–5:00 | Architecture | Ingestion → deterministic analytics → mandate → ranking → immutable evidence → optional bounded AI. |
 
 The seeded baseline has 18 managers and 1,007 accepted observations. Expected eligibility counts are **7 → 5 → 4**. The leader need not change: the candidate set and suitability decision do. No output rank or metric is hardcoded.
@@ -82,7 +100,7 @@ flowchart LR
     Gates --> Rank[Eligible-only weighted ranking]
     Rank --> Evidence[Immutable evaluation evidence]
     Evidence --> UI[React Decision Room / Audit]
-    Evidence --> LLM[Optional Responses API]
+    Evidence --> LLM[Optional Ollama or Responses API]
     LLM --> Validate[Structured claim validation]
     Validate --> Memo[Persisted IC memo / challenge]
 ```
@@ -233,6 +251,8 @@ Evidence metadata includes values, periods, methods, counts, source rows, normal
 ## AI Architecture
 
 The official OpenAI Python SDK calls **Responses API** `responses.parse` with Pydantic structured outputs. [Official Structured Outputs documentation](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses).
+
+Alternatively, `AI_PROVIDER=ollama` calls the local `/api/chat` endpoint with the Pydantic JSON schema and validates the response through the same application rules. [Ollama structured outputs](https://docs.ollama.com/capabilities/structured-outputs). No automatic provider switch sends data elsewhere; provider selection is explicit. The UI's availability flag means a provider is configured, not that its runtime, credit balance or model is healthy.
 
 The model sees the mandate, engine leader, eligible candidates/selected exclusions, verified metrics, factors, regimes, source notes, evidence values and allowed IDs. Source notes are untrusted data. Output identifies a known fund and provides interpretations/questions with citations and confidence labels. Challenge mode also receives the existing AI memo when available.
 

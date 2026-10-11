@@ -91,7 +91,7 @@ The backend derives performance/risk metrics, factor estimates, benchmark correl
 
 PostgreSQL retains normalized observations, ingestion issues, market observations with lineage, evaluation evidence, and generated memo claims. Third-party observations are fetched at runtime and stored locally; historical public datasets and local database volumes are not bundled in Git. Excel and Word exports are static snapshots of saved evaluations, not new source data.
 
-OpenAI is an optional interpretation service, not a financial data provider. It receives selected verified evidence and untrusted source notes; software retains ownership of calculations, eligibility, and rankings.
+OpenAI and local Ollama are optional interpretation providers, not financial data sources. They receive selected verified evidence and untrusted source notes; software retains ownership of calculations, eligibility, and rankings. In local mode, Qwen 2.5 runs on the host machine and no memo context is sent to OpenAI. The provider/model used is recorded with each generated artifact.
 
 ## Sources not used
 

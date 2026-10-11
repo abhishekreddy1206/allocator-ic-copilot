@@ -12,7 +12,7 @@ flowchart LR
  E --> R[Visible weighted ranking]
  R --> V[Immutable evaluation / evidence]
  V --> UI[React Decision Room / Audit]
- V --> AI[Optional OpenAI Responses boundary]
+ V --> AI[Optional OpenAI Responses or local Ollama boundary]
  AI --> G[Claim validation]
  G --> DB
 ```

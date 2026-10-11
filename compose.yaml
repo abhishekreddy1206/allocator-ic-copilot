@@ -18,6 +18,9 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-allocator}:${POSTGRES_PASSWORD:-allocator_local}@db:5432/${POSTGRES_DB:-allocator}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      AI_PROVIDER: ${AI_PROVIDER:-openai}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b-instruct-q4_K_M}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       SEED_DEMO: ${SEED_DEMO:-true}
     ports: ["127.0.0.1:8000:8000"]
     depends_on:

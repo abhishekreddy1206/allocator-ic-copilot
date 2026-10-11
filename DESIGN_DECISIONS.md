@@ -10,3 +10,4 @@
 - Immutable evaluation evidence: source return IDs, market observation IDs, methodology and data coverage accompany each metric. Old memos remain linked to old runs.
 - Missing months: retained gaps, never zero filled. Annualized growth/risk are suppressed for discontinuous histories; aligned relative metrics remain available with explicit counts. Hard risk mandates fail closed.
 - Optional enrichment isolation: network and AI failures preserve ingestion/evaluation. A deterministic briefing is explicitly labeled, never presented as an AI response.
+- Explicit AI provider selection: OpenAI remains supported; local Ollama enables actual model inference without API credits. Local context is deliberately bounded, schema-constrained citation handles resolve to saved evidence IDs, and the same full validator runs before persistence. No silent switch between local and hosted inference.

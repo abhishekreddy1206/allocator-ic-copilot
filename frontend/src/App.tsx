@@ -1112,6 +1112,12 @@ export default function App() {
                       >
                         <Download size={15} /> Export editable Word memo
                       </a>
+                      <a
+                        className="button"
+                        href={`/api/runs/${run.run_id}/memo.docx?include_evidence=true${memo ? `&memo_id=${memo.id}` : ""}`}
+                      >
+                        <Download size={15} /> Export memo with full evidence
+                      </a>
                       {memo && (
                         <button
                           className="button"
@@ -1124,8 +1130,9 @@ export default function App() {
                   </div>
                   {!ai && (
                     <div className="banner">
-                      Live AI is unavailable without OPENAI_API_KEY. The
-                      auditable rules-based briefing is fully available.
+                      AI is not configured. Select local Ollama or configure an
+                      OpenAI key. The auditable rules-based briefing is fully
+                      available.
                     </div>
                   )}
                   {memo ? (

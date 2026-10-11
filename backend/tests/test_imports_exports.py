@@ -85,7 +85,11 @@ def test_exports_are_snapshots_and_escape_formula_injection(db):
     payload = briefing_sections(saved)
     document = Document(BytesIO(memo_docx(saved, payload, {"provider": "Rules-based"}, evidence)))
     text = "\n".join(p.text for p in document.paragraphs)
-    assert saved["run_id"] in text and "Evidence appendix" in text
+    assert saved["run_id"] in text and "Evidence references" in text
+    detailed = Document(BytesIO(memo_docx(saved, payload, {}, evidence, include_evidence=True)))
+    assert "Evidence appendix" in "\n".join(p.text for p in detailed.paragraphs)
+    for eid in payload["sections"][0]["claims"][0]["evidence_ids"]:
+        assert eid.removeprefix(saved["run_id"] + ":") in text
     assert payload["sections"][0]["claims"][0]["text"] in text
     evaluate(db, MandateInput(maximum_drawdown=0.07), run.id)
     assert run.result == saved
@@ -118,6 +122,10 @@ def test_reviewed_import_api_and_export_run_ownership(db):
             for ext in ["comparison.xlsx", "memo.docx"]:
                 r = client.get(f"/api/runs/{rid}/{ext}")
                 assert r.status_code == 200 and r.content.startswith(b"PK")
+            detailed = client.get(f"/api/runs/{rid}/memo.docx?include_evidence=true")
+            assert detailed.status_code == 200
+            assert "committee-evidence" in detailed.headers["content-disposition"]
+            assert "Evidence appendix" in "\n".join(p.text for p in Document(BytesIO(detailed.content)).paragraphs)
             other = evaluate(db, MandateInput())
             memo = persist_memo(db, other, briefing_sections(other.result), "briefing", {})
             assert client.get(f"/api/runs/{rid}/memo.docx?memo_id={memo.id}").status_code == 404

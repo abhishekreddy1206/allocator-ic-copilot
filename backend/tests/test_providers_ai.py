@@ -5,6 +5,57 @@ from app.providers import CachedDemoProvider, MarketSeries, with_fallback, Frenc
 from app.ai import MemoOutput, SectionOutput, ClaimOutput, validate_output, generate_verified
 
 
+def test_local_provider_uses_schema_and_same_validator(monkeypatch):
+    import json
+    from app.ai import OllamaProvider, ai_configured, configured_provider
+
+    monkeypatch.setenv("AI_PROVIDER", "ollama")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    assert ai_configured() and isinstance(configured_provider(), OllamaProvider)
+    requests = []
+
+    def respond(request, timeout):
+        requests.append(json.loads(request.data))
+        assert timeout == 120
+        generated = output(refs=["ref_1"], fund="manager_a")
+        generated.recommended_fund_id = "manager_a"
+        if json.loads(request.data)["format"]["properties"]["sections"]["maxItems"] == 4:
+            generated.sections = [
+                SectionOutput(title=title, claims=[ClaimOutput(fund_id="manager_a", text="Does the source concern require independent verification?", evidence_ids=["ref_1"], confidence="medium", claim_type="diligence") for _ in range(3 if title == "Diligence Questions" else 1)])
+                for title in ["Argument Against", "Alternative Conditions", "Unresolved Risks", "Diligence Questions"]
+            ]
+        return BytesIO(json.dumps({"model": "local-test", "message": {"content": generated.model_dump_json()}, "done_reason": "stop"}).encode())
+
+    monkeypatch.setattr("app.ai.urllib.request.urlopen", respond)
+    result, metadata = generate_verified(OllamaProvider(), context())
+    assert result["recommended_fund_id"] == "A"
+    assert metadata["provider"] == "Ollama local inference"
+    assert requests[0]["format"]["properties"]["sections"]["maxItems"] == 5
+    assert requests[0]["format"]["$defs"]["ClaimOutput"]["properties"]["evidence_ids"]["maxItems"] == 1
+    assert not requests[0]["stream"]
+
+    foreign = context()
+    foreign["funds"].append({"id": "B", "eligible": True, "canonical_name": "Other Macro", "manager_name": "Other Partners"})
+    foreign["evidence"].append({"id": "OTHER", "fund_id": "B"})
+
+    def cross_fund(request, timeout):
+        generated = output(refs=["ref_2"], fund="manager_a")
+        generated.recommended_fund_id = "manager_a"
+        return BytesIO(json.dumps({"model": "local-test", "message": {"content": generated.model_dump_json()}}).encode())
+
+    monkeypatch.setattr("app.ai.urllib.request.urlopen", cross_fund)
+    with pytest.raises(ValueError, match="another fund"):
+        generate_verified(OllamaProvider(), foreign)
+    assert foreign["evidence"][0]["id"] == "E" and foreign["funds"][0]["id"] == "A"
+    monkeypatch.setattr("app.ai.urllib.request.urlopen", respond)
+    challenge = {**context(), "kind": "challenge"}
+    generated, _ = generate_verified(OllamaProvider(), challenge)
+    assert len(generated["sections"][-1]["claims"]) == 3
+    variants = requests[-1]["format"]["$defs"]["SectionOutput"]["oneOf"]
+    questions = next(v for v in variants if v["properties"]["title"]["const"] == "Diligence Questions")
+    assert questions["properties"]["claims"]["minItems"] == questions["properties"]["claims"]["maxItems"] == 3
+
+
 def test_provider_success_and_honest_fallback():
     cached = CachedDemoProvider()
 

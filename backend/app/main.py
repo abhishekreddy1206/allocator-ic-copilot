@@ -15,7 +15,7 @@ from app.mandates import MandateInput, PROFILES
 from app.service import seed_demo, evaluate, store_market
 from app.ingestion import ingest_csv
 from app.evidence import briefing_sections, persist_memo
-from app.ai import OpenAIResponsesProvider, generate_verified
+from app.ai import configured_provider, ai_configured, ai_provider_name, generate_verified
 from app.imports import read_table, preview, import_table, FIELDS, REQUIRED
 from app.exports import comparison_xlsx, memo_docx
 from fastapi.responses import Response
@@ -49,7 +49,7 @@ def health(db: DB):
 
 @app.get("/api/config")
 def config():
-    return {"ai_available": bool(os.getenv("OPENAI_API_KEY")), "profiles": PROFILES, "principle": "Deterministic software owns facts. AI helps interpret them."}
+    return {"ai_available": ai_configured(), "ai_provider": ai_provider_name(), "profiles": PROFILES, "principle": "Deterministic software owns facts. AI helps interpret them."}
 
 
 @app.post("/api/demo")
@@ -136,7 +136,7 @@ def export_comparison(run_id: str, db: DB):
 
 
 @app.get("/api/runs/{run_id}/memo.docx")
-def export_memo(run_id: str, db: DB, memo_id: str | None = None):
+def export_memo(run_id: str, db: DB, memo_id: str | None = None, include_evidence: bool = False):
     run = db.get(Run, run_id)
     if not run:
         raise HTTPException(404, "Evaluation not found")
@@ -146,7 +146,8 @@ def export_memo(run_id: str, db: DB, memo_id: str | None = None):
     payload = memo.structured_sections if memo else briefing_sections(run.result)
     metadata = memo.model_metadata if memo else {"provider": "Deterministic rules-based briefing"}
     evidence = {e.id: e for e in db.scalars(select(Evidence).where(Evidence.run_id == run_id))}
-    return Response(memo_docx(run.result, payload, metadata, evidence), media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers={"Content-Disposition": f'attachment; filename="committee-memo-{run_id}.docx"'})
+    filename = f"committee-{'evidence' if include_evidence else 'memo'}-{run_id}.docx"
+    return Response(memo_docx(run.result, payload, metadata, evidence, include_evidence), media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 
 @app.get("/api/data-health")
@@ -300,8 +301,8 @@ def create_memo(request: MemoRequest, db: DB):
         payload = briefing_sections(run.result)
         metadata = {"provider": "Deterministic rules-based briefing", "ai_generated": False}
     else:
-        if not os.getenv("OPENAI_API_KEY"):
-            raise HTTPException(503, "AI unavailable: OPENAI_API_KEY is not configured. The rules-based briefing remains available.")
+        if not ai_configured():
+            raise HTTPException(503, "AI unavailable: configure the OpenAI key or select the local Ollama provider. The rules-based briefing remains available.")
         eligible = [f for f in run.result["funds"] if f["eligible"]]
         if not eligible:
             raise HTTPException(422, "No eligible manager; revise mandate before AI interpretation")
@@ -334,7 +335,7 @@ def create_memo(request: MemoRequest, db: DB):
             "selected_recommendation": prior.structured_sections if prior and request.kind == "challenge" else None,
         }
         try:
-            payload, metadata = generate_verified(OpenAIResponsesProvider(), context)
+            payload, metadata = generate_verified(configured_provider(), context)
             metadata["ai_generated"] = True
             if request.kind == "memo":
                 # Numerical facts and mandate prose are always rendered by software.

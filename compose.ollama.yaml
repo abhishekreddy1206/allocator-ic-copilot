@@ -1,0 +1,4 @@
+services:
+  backend:
+    environment:
+      AI_PROVIDER: ollama

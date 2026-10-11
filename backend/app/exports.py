@@ -122,7 +122,7 @@ def comparison_xlsx(result):
     return out.getvalue()
 
 
-def memo_docx(result, payload, metadata, evidence):
+def memo_docx(result, payload, metadata, evidence, include_evidence=False):
     doc = Document()
     section = doc.sections[0]
     section.top_margin = section.bottom_margin = Inches(0.7)
@@ -136,8 +136,13 @@ def memo_docx(result, payload, metadata, evidence):
         style.font.name = "Calibri"
         style.font.color.rgb = RGBColor(0, 0, 0)
     doc.styles["Normal"].font.size = Pt(10)
-    doc.styles["Normal"].paragraph_format.space_after = Pt(6)
-    doc.styles["Heading 1"].font.size = Pt(14)
+    doc.styles["Normal"].paragraph_format.space_after = Pt(3)
+    doc.styles["Normal"].paragraph_format.line_spacing = 1
+    doc.styles["Title"].font.size = Pt(20)
+    doc.styles["Title"].paragraph_format.space_after = Pt(5)
+    doc.styles["Heading 1"].font.size = Pt(11)
+    doc.styles["Heading 1"].paragraph_format.space_before = Pt(7)
+    doc.styles["Heading 1"].paragraph_format.space_after = Pt(3)
     doc.add_heading("Investment committee research memo", 0)
     doc.add_paragraph(f"{result['mandate']['name']} | {result['mandate']['benchmark']} | {result['created_at'][:10]}")
     doc.add_paragraph(
@@ -154,13 +159,25 @@ def memo_docx(result, payload, metadata, evidence):
                     refs.append(eid)
                 numbers.append(str(refs.index(eid) + 1))
             doc.add_paragraph(claim["text"] + (" [" + ", ".join(numbers) + "]" if numbers else ""))
-    doc.add_heading("Evidence appendix", 1)
+    if include_evidence:
+        doc.add_page_break()
+    doc.add_heading("Evidence appendix" if include_evidence else "Evidence references", 1)
+    if not include_evidence:
+        intro = doc.add_paragraph("References below belong to the evaluation above. Full evidence IDs use its ID followed by a colon and the reference suffix. Inspect formulas and original sources in Audit, or download the full evidence export.")
+        intro.paragraph_format.keep_with_next = True
     for n, eid in enumerate(refs, 1):
         e = evidence.get(eid)
-        doc.add_paragraph(
-            f"[{n}] {e.label if e else 'Evidence unavailable'}\n{eid}\n"
-            + (f"Source: {e.source}. Period: {e.observation_period}. Method: {e.methodology}" if e else "Inspect the saved evaluation in the app.")
-        )
+        if include_evidence:
+            doc.add_paragraph(
+                f"[{n}] {e.label if e else 'Evidence unavailable'}\n{eid}\n"
+                + (f"Source: {e.source}. Period: {e.observation_period}. Method: {e.methodology}" if e else "Inspect the saved evaluation in the app.")
+            )
+        else:
+            suffix = eid.removeprefix(result["run_id"] + ":")
+            p = doc.add_paragraph(f"[{n}] {e.label if e else 'Evidence unavailable'} | {suffix}")
+            p.paragraph_format.space_after = Pt(1)
+            for run in p.runs:
+                run.font.size = Pt(8)
     for paragraph in doc.paragraphs:
         paragraph.paragraph_format.widow_control = True
         if paragraph.text.startswith("["):

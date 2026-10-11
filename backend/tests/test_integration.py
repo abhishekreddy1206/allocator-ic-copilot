@@ -76,6 +76,7 @@ def test_full_demo_transitions_evidence_and_memo_immutability(db):
 
 
 def test_api_no_key_flow_upload_evidence_and_ai_failure_preserves_run(db, monkeypatch):
+    monkeypatch.setenv("AI_PROVIDER", "openai")
     seed_demo(db)
     run = evaluate(db, MandateInput())
     db.commit()
@@ -106,6 +107,7 @@ def test_api_no_key_flow_upload_evidence_and_ai_failure_preserves_run(db, monkey
 
 
 def test_mocked_ai_api_composes_software_facts_and_challenge(db, monkeypatch):
+    monkeypatch.setenv("AI_PROVIDER", "openai")
     from app.ai import MemoOutput, SectionOutput, ClaimOutput
 
     seed_demo(db)
@@ -133,7 +135,7 @@ def test_mocked_ai_api_composes_software_facts_and_challenge(db, monkeypatch):
             recommended_fund_id=fid, sections=[SectionOutput(title=t, claims=[claim] * 3 if t == "Diligence Questions" else [claim]) for t in titles]
         ), {"provider": "Test double (never used by application)", "model": "test"}
 
-    monkeypatch.setattr("app.main.OpenAIResponsesProvider.generate", mocked_generate)
+    monkeypatch.setattr("app.ai.OpenAIResponsesProvider.generate", mocked_generate)
     try:
         client = TestClient(app)
         for kind in ["memo", "challenge"]:
