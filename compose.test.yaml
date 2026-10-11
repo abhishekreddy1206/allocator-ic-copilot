@@ -1,0 +1,24 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: allocator_test
+      POSTGRES_PASSWORD: allocator_test
+      POSTGRES_DB: allocator_test
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U allocator_test -d allocator_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  tests:
+    image: allocator-backend-tests:local
+    build: ./backend
+    command: [sh, -c, "alembic upgrade head && pytest -q"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://allocator_test:allocator_test@postgres:5432/allocator_test
+      OPENAI_API_KEY: ""
+      AI_PROVIDER: openai
+      SEED_DEMO: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy

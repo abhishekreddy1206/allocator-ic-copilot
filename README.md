@@ -236,6 +236,8 @@ The bundled dataset contains 18 fictional managers and 1,007 accepted monthly ob
 
 The latest verification includes 37 passing backend tests, frontend TypeScript/lint/build checks, and actual local-model memo/challenge generation with persisted payload and citation checks. The reviewed [AI memo example](docs/examples/ai-memo.docx) is two pages; the [challenge example](docs/examples/ai-challenge.docx) is one page. These are saved synthetic-data examples; their evidence IDs refer to the original local evaluation.
 
+For a new-machine review, `make test` provisions a disposable PostgreSQL test environment automatically; no existing app/database or AI credentials are needed. A Python-only `make test-unit` path covers database-free logic when Docker is unavailable. See [SETUP.md](SETUP.md) for prerequisites and the distinction between unit and integration coverage.
+
 [REVIEW.md](REVIEW.md) records actual checks, run IDs and remaining limitations. [SETUP.md](SETUP.md) contains the commands to reproduce acceptance, export fresh artifacts and keep credentials/private data out of Git. [PRESENTATION_GUIDE.md](PRESENTATION_GUIDE.md) contains the timed demonstration and requirement assessment.
 
 ## Known Limitations

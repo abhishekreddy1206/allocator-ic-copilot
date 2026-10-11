@@ -1,4 +1,5 @@
-.PHONY: up up-local demo smoke smoke-ai acceptance test build lint
+BACKEND_PYTHON ?= $(CURDIR)/.venv/bin/python
+.PHONY: up up-local demo smoke smoke-ai acceptance test test-unit build lint
 up:
 	docker compose up --build -d
 up-local:
@@ -14,7 +15,9 @@ acceptance:
 	mkdir -p artifacts/live-ai-acceptance
 	docker compose cp backend:/tmp/live-ai-acceptance/. artifacts/live-ai-acceptance/
 test:
-	docker compose exec backend pytest -q
+	sh scripts/test-backend.sh
+test-unit:
+	cd backend && "$(BACKEND_PYTHON)" -m pytest -q tests/test_analytics.py tests/test_mandates.py tests/test_providers_ai.py
 build:
 	cd frontend && npm ci && npm run build
 lint:

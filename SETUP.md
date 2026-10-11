@@ -49,6 +49,30 @@ Docker Desktop reaches Ollama through `http://host.docker.internal:11434`. For a
 
 ## Verify the workflow
 
+### Reviewer tests on a new machine
+
+With Docker running, the complete backend test suite needs only the checkout:
+
+```sh
+make test
+```
+
+This command builds the backend test image, starts a fresh PostgreSQL 16 container, waits for database readiness, applies Alembic migrations, and runs the suite. It uses a unique Compose project and cleans up its own containers/network/anonymous database volume afterward, including after test failure. It does not require the application to be running, a local PostgreSQL installation, `.env`, Node, Ollama, or API credentials. Initial image/dependency downloads require network access. Application database volumes are separate and remain untouched.
+
+If Docker/PostgreSQL is unavailable, run the database-free unit subset with Python 3.12:
+
+```sh
+python3.12 -m venv .venv
+.venv/bin/pip install -r backend/requirements.lock
+make test-unit
+```
+
+These tests exercise analytics, mandate rules, provider fixtures and AI validation with mocked inference. They do not verify ingestion persistence, PostgreSQL constraints, transactions or database-backed API behavior. To use an existing Python environment, run `make test-unit BACKEND_PYTHON=python3.12` after installing dependencies there. Dependencies are still required even when no database server is needed.
+
+Running bare `pytest` over the full suite on the host still requires a reachable PostgreSQL instance through `DATABASE_URL`. Synthetic manager/test fixtures supply records; they do not replace a database engine. Prefer `make test` for integration coverage instead of swapping PostgreSQL for SQLite or silently skipping failures.
+
+### Application and real-model acceptance
+
 ```sh
 make test
 make lint
@@ -57,7 +81,7 @@ make smoke
 make acceptance
 ```
 
-`make build` needs local Node 22.13 or later; Docker startup already builds the frontend with its packaged runtime. Frontend lint also uses local Node. Backend tests run inside Docker and use private database schemas, preserving application data.
+`make build` needs local Node 22.13 or later; Docker startup already builds the frontend with its packaged runtime. Frontend lint also uses local Node. `make lint`, `make smoke` and `make acceptance` require the application backend to be running; `make test` independently provisions its test database.
 
 `make smoke` exercises the deterministic mandate journey. `make acceptance` additionally performs actual memo and challenge generation, checks persisted payloads and evaluation-owned citations, and downloads JSON plus compact/full-evidence Word exports into `artifacts/live-ai-acceptance/`. This directory is ignored by Git. `make smoke-ai` runs the same AI journey without copying exports out.
 
