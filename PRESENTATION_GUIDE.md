@@ -24,7 +24,7 @@ The value is less manual reconciliation, clearer reasons for exclusions, and fas
 
 ## Five-minute recording walkthrough
 
-Record one story: messy manager data → validated history → mandate fit → shortlist → committee memo → source verification. Use the steps below in order. Screenshots of the first six stages were captured October 12; the AI screenshots are labeled references from the verified October 11 acceptance.
+Record one story: messy manager data → validated history → mandate fit → shortlist → committee memo → source verification. Use the steps below in order. The current app also offers a numbered workflow and a next-action button on each screen. The refreshed overview is shown in README; the screenshots below document the earlier October 12 layout, with the same controls. The AI screenshots are labeled references from the verified October 11 acceptance.
 
 ### Before pressing Record
 

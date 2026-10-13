@@ -60,6 +60,80 @@ const pages = [
   "Audit",
 ] as const;
 type Page = (typeof pages)[number];
+const workflow: { page: Page; title: string; description: string }[] = [
+  {
+    page: "Data Health",
+    title: "Review data",
+    description: "Check your inputs",
+  },
+  {
+    page: "Universe",
+    title: "Compare managers",
+    description: "Explore the universe",
+  },
+  {
+    page: "Decision Room",
+    title: "Set your mandate",
+    description: "Define what fits",
+  },
+  {
+    page: "Shortlist",
+    title: "Review shortlist",
+    description: "Understand the tradeoffs",
+  },
+  {
+    page: "IC Memo",
+    title: "Draft your memo",
+    description: "Explain the decision",
+  },
+];
+const pageGuidance: Record<
+  Page,
+  { description: string; next: Page; action: string }
+> = {
+  Overview: {
+    description:
+      "Turn manager data into a clear, evidence-backed investment decision.",
+    next: "Data Health",
+    action: "Review your data",
+  },
+  "Data Health": {
+    description:
+      "Resolve data issues before you compare performance. Original sources stay within reach.",
+    next: "Universe",
+    action: "Compare managers",
+  },
+  Universe: {
+    description:
+      "Explore the full opportunity set. Compare risk, return and liquidity in one place.",
+    next: "Decision Room",
+    action: "Set your mandate",
+  },
+  "Decision Room": {
+    description:
+      "Define your requirements. See who qualifies and why the decision changes.",
+    next: "Shortlist",
+    action: "Review shortlist",
+  },
+  Shortlist: {
+    description:
+      "Understand each candidate’s fit, strengths and outstanding diligence questions.",
+    next: "IC Memo",
+    action: "Draft your memo",
+  },
+  "IC Memo": {
+    description:
+      "Bring your recommendation, risks and supporting evidence into a committee draft.",
+    next: "Audit",
+    action: "Verify the evidence",
+  },
+  Audit: {
+    description:
+      "Follow a claim back to its calculation, methodology or original source.",
+    next: "Overview",
+    action: "Back to overview",
+  },
+};
 const icons = [
   LayoutDashboard,
   ShieldCheck,
@@ -114,7 +188,7 @@ export default function App() {
   const [search, setSearch] = useState(""),
     [strategy, setStrategy] = useState("All strategies"),
     [sort, setSort] = useState("rank"),
-    [issueFilter, setIssueFilter] = useState("all"),
+    [issueFilter, setIssueFilter] = useState("attention"),
     [issuePage, setIssuePage] = useState(0),
     [auditType, setAuditType] = useState(""),
     [auditSearch, setAuditSearch] = useState(""),
@@ -123,6 +197,8 @@ export default function App() {
     health?.issues.filter(
       (i) =>
         issueFilter === "all" ||
+        (issueFilter === "attention" &&
+          (i.severity === "error" || i.severity === "warning")) ||
         i.severity === issueFilter ||
         i.issue_type === issueFilter,
     ) || [];
@@ -333,9 +409,7 @@ export default function App() {
             ALLOCATOR<span>IC COPILOT</span>
           </div>
         </div>
-        <div className="workspace-label">
-          RESEARCH WORKSPACE <span>01</span>
-        </div>
+        <div className="workspace-label">YOUR WORKSPACE</div>
         <nav>
           {pages.map((p, i) => {
             const Icon = icons[i];
@@ -343,12 +417,22 @@ export default function App() {
               <button
                 key={p}
                 aria-label={p}
+                aria-current={page === p ? "page" : undefined}
+                title={p}
                 onClick={() => navigate(p)}
                 className={page === p ? "active" : ""}
               >
                 <Icon size={18} />
-                <span>{p}</span>
-                {p === "Decision Room" && <span className="nav-dot" />}
+                <span className="nav-copy">
+                  <strong>{p}</strong>
+                  <small>
+                    {p === "Overview"
+                      ? "The big picture"
+                      : p === "Audit"
+                        ? "Claims and original sources"
+                        : workflow.find((step) => step.page === p)?.description}
+                  </small>
+                </span>
               </button>
             );
           })}
@@ -357,16 +441,16 @@ export default function App() {
           <div className="principle">
             <Scale size={18} />
             <p>
-              Deterministic software owns facts.
+              Keep the evidence close.
               <br />
-              <span>AI helps interpret them.</span>
+              <span>Clear decisions start with clear inputs.</span>
             </p>
           </div>
           <div className="profile">
             <div className="avatar">IC</div>
             <div>
               Investment research
-              <span>Internal prototype · Synthetic demo</span>
+              <span>Local research workspace</span>
             </div>
           </div>
         </div>
@@ -381,7 +465,20 @@ export default function App() {
             <span className="connection">
               <span /> Evidence connected
             </span>
-            <label className={`button small ${busy ? "disabled" : ""}`}>
+            <label
+              className={`button small import-action ${busy ? "disabled" : ""}`}
+              role="button"
+              tabIndex={busy ? -1 : 0}
+              aria-disabled={!!busy}
+              onKeyDown={(e) => {
+                if (!busy && (e.key === "Enter" || e.key === " ")) {
+                  e.preventDefault();
+                  e.currentTarget
+                    .querySelector<HTMLInputElement>('input[type="file"]')
+                    ?.click();
+                }
+              }}
+            >
               <Upload size={14} /> Import Excel / CSV
               <input
                 type="file"
@@ -398,30 +495,31 @@ export default function App() {
         <div className="content">
           <div className="page-heading">
             <div>
-              <div className="eyebrow">INVESTMENT DECISION INTELLIGENCE</div>
-              <h1>
-                {page === "Overview" ? "Clarity before conviction." : page}
-              </h1>
-              <p>
+              <div className="eyebrow">
                 {page === "Overview"
-                  ? "From manager data to a defensible investment decision."
-                  : page === "Decision Room"
-                    ? "Change the mandate. See the decision move. Every change has a reason."
-                    : page === "Data Health"
-                      ? "Inspect what changed, what was rejected, and what remains unresolved."
-                      : page === "Audit"
-                        ? "Trace each claim through verified evidence to its source and methodology."
-                        : page === "IC Memo"
-                          ? "A committee-ready narrative, grounded in an immutable evaluation."
-                          : "Verified performance. Explicit constraints. Transparent comparisons."}
-              </p>
+                  ? "MANAGER RESEARCH, CONNECTED"
+                  : "YOUR INVESTMENT WORKFLOW"}
+              </div>
+              <h1>
+                {page === "Overview" ? "Your investment workspace" : page}
+              </h1>
+              <p>{pageGuidance[page].description}</p>
             </div>
             <div className="heading-actions">
               {run && (
-                <span className="source-badge">
+                <span
+                  className={`source-badge ${run.market_status.includes("CACHED") ? "demo-source" : "live-source"}`}
+                >
                   <span /> {run.market_status}
                 </span>
               )}
+              <button
+                className="button primary next-action"
+                disabled={!!busy || !run}
+                onClick={() => navigate(pageGuidance[page].next)}
+              >
+                {pageGuidance[page].action} <ArrowRight size={15} />
+              </button>
               <button
                 className="button ghost small"
                 disabled={!!busy}
@@ -431,6 +529,29 @@ export default function App() {
               </button>
             </div>
           </div>
+          {run && (
+            <div
+              className="workflow-rail"
+              role="group"
+              aria-label="Investment workflow"
+            >
+              {workflow.map((step, index) => (
+                <button
+                  key={step.page}
+                  className={page === step.page ? "current" : ""}
+                  aria-current={page === step.page ? "step" : undefined}
+                  onClick={() => navigate(step.page)}
+                >
+                  <span className="step-number">{index + 1}</span>
+                  <span>
+                    <strong>{step.title}</strong>
+                    <small>{step.description}</small>
+                  </span>
+                  <ChevronRight size={13} />
+                </button>
+              ))}
+            </div>
+          )}
           {error && (
             <div role="alert" className="banner error">
               <AlertTriangle size={16} />
@@ -715,6 +836,7 @@ export default function App() {
                         value={issueFilter}
                         onChange={(e) => changeIssueFilter(e.target.value)}
                       >
+                        <option value="attention">Errors and warnings</option>
                         <option value="all">All issues and actions</option>
                         <option value="error">Errors</option>
                         <option value="warning">Warnings</option>

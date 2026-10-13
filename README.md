@@ -27,6 +27,8 @@ Detailed installation, provider configuration, verification commands and trouble
 
 ## Workflow for Finance Users
 
+The numbered workflow follows **Review data → Compare managers → Set your mandate → Review shortlist → Draft your memo**. Each screen explains its purpose and offers the next action; the sidebar supports jumping directly to any screen. Data Health initially shows errors and warnings; choose **All issues and actions** to inspect the complete transformation ledger.
+
 **Import Excel / CSV** opens a review dialog before saving anything. Select an XLSX worksheet, match your column headers, inspect validation results, and correct cells. Update the preview after each edit, then confirm the import. The first 200 rows are editable in the UI; validation covers all rows, up to 50,000. Issue previews prioritize errors and warnings and show up to 300 events; Data Health holds the full ledger after import. Headers must be in row one and monthly observations must use long format.
 
 XLSX date cells and percentage-formatted numbers are recognized. Workbook formulas are never evaluated or accepted as cached results; replace them with verified values before importing. Legacy XLS, macro-enabled files, merged header layouts, and wide monthly matrices are not supported. Original file bytes, source digest, chosen sheet, column mapping, and corrections are retained. Data Health lets you download the original files. Evidence source records show original values alongside reviewed corrections. Import identities include the review configuration; reimporting the identical reviewed version is idempotent. Corrections can rescue rejected rows, but cannot overwrite existing accepted monthly returns.

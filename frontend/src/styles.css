@@ -1855,3 +1855,398 @@ tr[tabindex]:hover {
     flex-wrap: wrap;
   }
 }
+
+/* A clear, approachable research workspace. */
+:root {
+  color: #233c35;
+  background: #f4f6f5;
+  font-size: 14px;
+}
+.sidebar {
+  background: #173b34;
+  padding: 26px 18px 0;
+  color: #e5eee9;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.brand {
+  font-size: 15px;
+  letter-spacing: 1.4px;
+}
+.brand-mark {
+  background: #244b40;
+  border-color: #507866;
+  border-radius: 12px;
+  color: #d1e7d4;
+}
+.workspace-label {
+  margin: 30px 12px 13px;
+  color: #adc3b8;
+  font-size: 10px;
+  letter-spacing: 1.2px;
+}
+.sidebar nav {
+  gap: 5px;
+}
+.sidebar nav button {
+  padding: 11px 13px;
+  border-radius: 10px;
+  color: #c0d4c9;
+  gap: 12px;
+}
+.sidebar nav button:hover {
+  background: #244a40;
+}
+.sidebar nav button.active {
+  background: #e2efdf;
+  color: #214638;
+}
+.sidebar nav button.active:before {
+  display: none;
+}
+.nav-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.nav-copy strong {
+  font-weight: 550;
+  font-size: 12px;
+}
+.nav-copy small {
+  font-size: 10px;
+  color: #b1c8ba;
+}
+.active .nav-copy small {
+  color: #527258;
+}
+.sidebar-bottom {
+  padding-top: 20px;
+}
+.principle {
+  color: #d0e1d5;
+  border-color: #3a5d50;
+  padding: 18px 8px;
+  font-size: 11px;
+}
+.principle span {
+  color: #acc4b5;
+}
+.profile {
+  background: #12332c;
+  margin: 0 -18px;
+}
+.profile span {
+  color: #adc8b7;
+}
+.topbar {
+  background: #fff;
+  border-color: #e1e8e3;
+  font-size: 12px;
+}
+.topbar strong {
+  font-weight: 600;
+}
+.content {
+  padding-top: 28px;
+}
+.page-heading {
+  margin-bottom: 22px;
+}
+.page-heading h1 {
+  font-family: inherit;
+  font-size: 31px;
+  font-weight: 650;
+  letter-spacing: -1.1px;
+}
+.page-heading p {
+  font-size: 13px;
+  color: #64796e;
+  max-width: 580px;
+  line-height: 1.6;
+}
+.eyebrow {
+  font-size: 10px;
+  color: #64806e;
+  letter-spacing: 1.35px;
+  margin-bottom: 9px;
+}
+.heading-actions {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 9px;
+}
+.heading-actions .source-badge {
+  grid-column: 1 / -1;
+  justify-self: end;
+}
+.source-badge {
+  font-size: 9px;
+  border-radius: 20px;
+  padding: 7px 11px;
+}
+.demo-source {
+  background: #fff6e6;
+  color: #8b641e;
+  border-color: #e9d8ae;
+}
+.demo-source > span {
+  background: #b48835;
+}
+.live-source {
+  background: #edf5ed;
+  color: #315e44;
+}
+.button {
+  border-radius: 9px;
+  padding: 11px 15px;
+  font-size: 12px;
+  font-weight: 550;
+  border-color: #d6e1d9;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease;
+}
+.button.small {
+  font-size: 11px;
+  padding: 9px 12px;
+}
+.button.primary {
+  background: #23634c;
+  border-color: #23634c;
+}
+.button.primary:hover {
+  background: #184d3a;
+}
+.import-action {
+  background: #edf5ee;
+  border-color: #c6dbca;
+  color: #23583f;
+  cursor: pointer;
+}
+.import-action:hover {
+  background: #e0eee2;
+}
+.import-action:focus-visible {
+  outline: 2px solid #6a9475;
+  outline-offset: 3px;
+}
+.workflow-rail {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+  padding: 2px 1px 5px;
+}
+.workflow-rail button {
+  flex: 1;
+  min-width: 130px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-align: left;
+  border: 1px solid #e0e7e1;
+  background: #fff;
+  padding: 12px 11px;
+  border-radius: 11px;
+}
+.workflow-rail button > span:nth-child(2) {
+  flex: 1;
+}
+.workflow-rail strong {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.workflow-rail small {
+  display: block;
+  font-size: 9px;
+  line-height: 1.4;
+  color: #6e8275;
+  margin-top: 3px;
+}
+.workflow-rail button > svg {
+  color: #9aada1;
+  flex-shrink: 0;
+}
+.workflow-rail .step-number {
+  width: 25px;
+  height: 25px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #718476;
+  background: #f1f5ef;
+  font-size: 11px;
+  font-weight: 600;
+}
+.workflow-rail button:hover {
+  background: #f1f7f0;
+  border-color: #bacebb;
+}
+.workflow-rail .current {
+  background: #eaf3e7;
+  border-color: #aac5ab;
+}
+.workflow-rail .current .step-number {
+  background: #23634c;
+  color: #fff;
+}
+.stats {
+  background: transparent;
+  border: 0;
+  gap: 12px;
+}
+.stats .stat {
+  background: #fff;
+  border: 1px solid #e0e7e0;
+  border-radius: 13px;
+  padding: 20px;
+  box-shadow: 0 3px 10px #183c2704;
+}
+.stat > div {
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  color: #667e6b;
+}
+.stat > strong {
+  font-size: 34px;
+  font-weight: 600;
+  margin: 12px 0 5px;
+}
+.stat p {
+  font-size: 11px;
+  color: #718476;
+}
+.panel {
+  border-radius: 13px;
+  border-color: #e0e7e0;
+  box-shadow: 0 3px 12px #183c2704;
+}
+.panel-title {
+  padding: 22px 23px 18px;
+}
+.panel-title p {
+  font-size: 12px;
+  color: #718476;
+}
+.candidate strong {
+  font-size: 12px;
+}
+.mandate-controls > label,
+.control > label {
+  font-size: 12px;
+  color: #425f4b;
+}
+.mandate-controls label > span,
+.control label > span {
+  font-size: 8px;
+  color: #6e8275;
+}
+.mandate-controls select {
+  font-size: 12px;
+  border-radius: 8px;
+  border-color: #d3dfd4;
+  padding: 11px;
+}
+.decision-summary h2 {
+  font-family: inherit;
+  font-size: 25px;
+  font-weight: 600;
+}
+.shortlist-card h2 {
+  font-family: inherit;
+  font-size: 21px;
+}
+.filters input,
+.filters select {
+  border-radius: 8px;
+}
+@media (max-width: 1100px) {
+  .sidebar {
+    padding-inline: 13px;
+  }
+  .profile {
+    margin-inline: -13px;
+  }
+  .nav-copy small {
+    font-size: 9px;
+  }
+  .workflow-rail small {
+    display: none;
+  }
+  .workflow-rail button {
+    min-width: 122px;
+    padding: 11px 9px;
+  }
+  .workflow-rail button > svg {
+    display: none;
+  }
+}
+@media (max-width: 800px) {
+  .sidebar {
+    padding: 23px 7px;
+  }
+  .sidebar nav button {
+    flex-direction: column;
+    gap: 5px;
+    padding: 11px 2px;
+  }
+  .sidebar nav button .nav-copy {
+    display: block;
+    text-align: center;
+  }
+  .sidebar .nav-copy strong {
+    font-size: 9px;
+    white-space: normal;
+    line-height: 1.25;
+  }
+  .sidebar .nav-copy small {
+    display: none;
+  }
+  .page-heading {
+    flex-direction: column;
+    gap: 15px;
+  }
+  .page-heading h1 {
+    font-size: 26px;
+  }
+  .heading-actions {
+    grid-template-columns: auto auto;
+    align-self: stretch;
+  }
+  .heading-actions .source-badge {
+    grid-column: auto;
+    justify-self: start;
+    align-self: center;
+  }
+  .heading-actions .next-action {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: space-between;
+  }
+  .workflow-rail {
+    margin-bottom: 18px;
+  }
+  .workflow-rail button {
+    min-width: 137px;
+  }
+  .stats .stat {
+    padding: 16px;
+  }
+  .stat > strong {
+    font-size: 28px;
+  }
+}
+@media print {
+  .workflow-rail {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+}
