@@ -18,6 +18,7 @@ from app.evidence import briefing_sections, persist_memo
 from app.ai import configured_provider, ai_configured, ai_provider_name, generate_verified
 from app.imports import read_table, preview, import_table, FIELDS, REQUIRED
 from app.exports import comparison_xlsx, memo_docx
+from app.market_context import market_context
 from fastapi.responses import Response
 import json
 
@@ -171,6 +172,16 @@ def data_health(db: DB):
 def latest(db: DB):
     run = db.scalar(select(Run).order_by(Run.created_at.desc()).limit(1))
     return run.result if run else None
+
+
+@app.get("/api/runs/{run_id}/market-context")
+def run_market_context(run_id: str, db: DB):
+    run = db.get(Run, run_id)
+    if not run:
+        raise HTTPException(404, "Evaluation not found")
+    rows = db.scalars(select(Evidence).where(Evidence.run_id == run_id, Evidence.type.in_(["benchmark_observation", "macro_observation"]))).all()
+    observations = [dict(id=e.id, type=e.type, identifier=e.source_identifier, period=e.observation_period, value=e.value["value"], source=e.source, status=e.live_or_cached) for e in rows]
+    return market_context(run.result["mandate"]["benchmark"], observations)
 
 
 class EvaluationRequest(BaseModel):

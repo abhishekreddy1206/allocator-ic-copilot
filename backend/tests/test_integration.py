@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 from fastapi.testclient import TestClient
 from app.ingestion import ingest_csv, number, identifier, month
-from app.models import Evidence, MonthlyReturn, DataQualityIssue, Run, Fund
+from app.models import Evidence, MonthlyReturn, DataQualityIssue, Run, Fund, BenchmarkReturn
 from app.service import seed_demo, evaluate
 from app.mandates import MandateInput
 from app.evidence import briefing_sections, persist_memo
@@ -113,6 +113,16 @@ def test_api_no_key_flow_upload_evidence_and_ai_failure_preserves_run(db, monkey
         assert metrics and metrics + next_metrics == combined
         assert all(e["type"] == "computed_metric" and "harbor" in e["label"].lower() for e in combined)
         assert client.get(evidence_url + "&offset=-1").status_code == 422
+        context_url = f"/api/runs/{r['run_id']}/market-context"
+        context = client.get(context_url).json()
+        assert context["benchmark"] == "SPY" and context["status"] == "CACHED DEMO DATA"
+        assert len(context["chart"]) == 13 and context["metrics"]["return_12m"] is not None
+        assert all(db.get(Evidence, row["id"]).run_id == r["run_id"] for row in context["observations"])
+        benchmark = db.scalar(select(BenchmarkReturn).where(BenchmarkReturn.symbol == "SPY").order_by(BenchmarkReturn.period.desc()))
+        benchmark.return_value = 0.99
+        db.flush()
+        assert client.get(context_url).json() == context  # Current market edits cannot change a saved run's trends.
+        assert client.get("/api/runs/not-a-run/market-context").status_code == 404
     finally:
         app.dependency_overrides.clear()
 

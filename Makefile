@@ -17,7 +17,7 @@ acceptance:
 test:
 	sh scripts/test-backend.sh
 test-unit:
-	cd backend && "$(BACKEND_PYTHON)" -m pytest -q tests/test_analytics.py tests/test_mandates.py tests/test_providers_ai.py
+	cd backend && "$(BACKEND_PYTHON)" -m pytest -q tests/test_analytics.py tests/test_mandates.py tests/test_providers_ai.py tests/test_market_context.py
 build:
 	cd frontend && npm ci && npm run build
 lint:

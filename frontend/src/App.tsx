@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useDialogFocus } from "./useDialogFocus";
+import MarketContext from "./MarketContext";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -711,6 +712,10 @@ export default function App() {
                       </button>
                     </div>
                   </div>
+                  <MarketContext
+                    runId={run.run_id}
+                    openEvidence={openEvidence}
+                  />
                   <div className="bottom-grid">
                     <div className="panel data-health-card">
                       <div className="panel-title">

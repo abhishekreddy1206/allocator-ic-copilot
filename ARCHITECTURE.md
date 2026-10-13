@@ -30,6 +30,8 @@ Raw uploads retain their original bytes, SHA-256 digest, mappings, corrections a
 
 Public retrieval is explicit. Each failed source uses an explicitly labeled synthetic fallback. AI or market-provider failure preserves the evaluation and available briefing.
 
+Market trends are computed on demand from a run’s saved benchmark and macro evidence, without retrieving new data or changing that run. Period returns require complete consecutive 3- or 12-month windows; annualized volatility uses 12 monthly returns. The chart compounds a starting index of 100. Macro changes require adjacent months and show each series’ own date and source status.
+
 ## Code map
 
 | Area | Files |
@@ -37,6 +39,7 @@ Public retrieval is explicit. Each failed source uses an explicitly labeled synt
 | API and orchestration | `backend/app/main.py`, `service.py` |
 | Imports and validation | `backend/app/ingestion.py`, `imports.py` |
 | Metrics and factor regressions | `backend/app/analytics.py` |
+| Saved market trends | `backend/app/market_context.py`, `frontend/src/MarketContext.tsx` |
 | Mandate rules and scores | `backend/app/mandates.py` |
 | Public providers and synthetic fixtures | `backend/app/providers.py`, `demo.py` |
 | Evidence, AI and exports | `backend/app/evidence.py`, `ai.py`, `exports.py` |
@@ -49,7 +52,7 @@ Import checks cover required values, units, dates, duplicate observations, ident
 
 AI checks reject unknown funds, invalid or cross-fund citations, invalid recommendations and unsupported quantitative prose. Software renders quantitative claims directly; model interpretations and source notes still require human review. A valid citation does not establish semantic correctness.
 
-Recorded verification includes 37 passing PostgreSQL-backed tests and frontend lint/type/build checks on October 12, 2026. Actual local Qwen memo and challenge generation, persistence and citation ownership were verified on October 11. The live OpenAI path was not verified successfully because API credit was exhausted. Tests use mocked inference; they do not replace actual-provider acceptance. See [SETUP.md](SETUP.md) for reproduction commands.
+Recorded verification includes 40 passing PostgreSQL-backed tests and frontend lint/type/build checks on October 12, 2026. Actual local Qwen memo and challenge generation, persistence and citation ownership were verified on October 11. The live OpenAI path was not verified successfully because API credit was exhausted. Tests use mocked inference; they do not replace actual-provider acceptance. See [SETUP.md](SETUP.md) for reproduction commands.
 
 ## Limitations
 

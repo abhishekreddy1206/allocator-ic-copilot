@@ -28,6 +28,8 @@ For AI memo generation, follow the local Ollama or optional OpenAI instructions 
 
 Choose **Refresh public data** to retrieve benchmark and market inputs. The app labels live data and synthetic fallbacks.
 
+**Market trends** on Overview shows the selected benchmark’s recent growth, returns and volatility, plus available VIX and Treasury-yield readings. Dates, source status and underlying observations stay tied to the saved evaluation.
+
 ## Test
 
 ```sh
