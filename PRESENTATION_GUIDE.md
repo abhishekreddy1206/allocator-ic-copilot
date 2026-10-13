@@ -26,6 +26,8 @@ The value is less manual reconciliation, clearer reasons for exclusions, and fas
 
 Record one story: messy manager data → validated history → mandate fit → shortlist → committee memo → source verification. Use the steps below in order. The current app also offers a numbered workflow and a next-action button on each screen. The refreshed overview is shown in README; the screenshots below document the earlier October 12 layout, with the same controls. The AI screenshots are labeled references from the verified October 11 acceptance.
 
+The latest UI uses eight-row manager/evidence pages and ten-row Data Health pages. On Shortlist, expand **Why it fits** to show rationale and concerns, or **How the score is calculated** for weights and contributions. In a manager drawer, expand **Mandate fit, strengths & concerns**. Audit keeps saved memo claims separate from the searchable registry; expand **Verify memo claims** to follow citations. The current audit layout is shown in [docs/audit.png](docs/audit.png).
+
 ### Before pressing Record
 
 - Open the app in a wide browser window and keep the navigation visible. Close unrelated tabs and notifications.

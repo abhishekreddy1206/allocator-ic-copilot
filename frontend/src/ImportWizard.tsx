@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useDialogFocus } from "./useDialogFocus";
 import { X, RefreshCw, Check } from "lucide-react";
 import { api, label } from "./api";
 import type { Run } from "./types";
@@ -48,6 +49,9 @@ export default function ImportWizard({
   const [reviewed, setReviewed] = useState(false);
   const [page, setPage] = useState(0);
   const [confirmed, setConfirmed] = useState(false);
+  const dialog = useDialogFocus(true, () => {
+    if (!busy) close();
+  });
   function form() {
     const body = new FormData();
     body.append("file", file);
@@ -123,6 +127,8 @@ export default function ImportWizard({
     <div className="overlay">
       <div
         className="import-dialog"
+        ref={dialog}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label="Review manager import"

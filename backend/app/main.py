@@ -3,7 +3,7 @@
 from contextlib import asynccontextmanager
 import os
 from typing import Annotated
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import RateLimitError
@@ -199,13 +199,13 @@ def refresh(db: DB):
 
 
 @app.get("/api/evidence")
-def list_evidence(db: DB, run_id: str, type: str | None = None, q: str = "", limit: int = 150):
+def list_evidence(db: DB, run_id: str, type: str | None = None, q: str = "", limit: int = 150, offset: int = Query(default=0, ge=0)):
     query = select(Evidence).where(Evidence.run_id == run_id)
     if type:
         query = query.where(Evidence.type == type)
     if q:
         query = query.where(Evidence.label.ilike("%" + q[:100] + "%"))
-    rows = db.scalars(query.order_by(Evidence.label).limit(max(1, min(limit, 500)))).all()
+    rows = db.scalars(query.order_by(Evidence.label, Evidence.id).offset(offset).limit(max(1, min(limit, 500)))).all()
     return [{k: getattr(e, k) for k in ["id", "type", "label", "value", "unit", "source", "observation_period", "live_or_cached"]} for e in rows]
 
 

@@ -102,6 +102,17 @@ def test_api_no_key_flow_upload_evidence_and_ai_failure_preserves_run(db, monkey
         source = db.scalar(select(MonthlyReturn))
         assert client.get(f"/api/uploads/{source.source_file}/rows/{source.source_row}").json()["sha256"]
         assert client.get("/api/evidence?run_id=" + r["run_id"] + "&type=factor_estimate").json()
+        evidence_url = "/api/evidence?run_id=" + r["run_id"]
+        first = client.get(evidence_url + "&limit=500").json()
+        beyond = client.get(evidence_url + "&limit=9&offset=500").json()
+        assert len(first) == 500 and len(beyond) == 9
+        assert not {e["id"] for e in first} & {e["id"] for e in beyond}
+        metrics = client.get(evidence_url + "&type=computed_metric&q=Harbor&limit=9").json()
+        next_metrics = client.get(evidence_url + "&type=computed_metric&q=Harbor&limit=9&offset=9").json()
+        combined = client.get(evidence_url + "&type=computed_metric&q=Harbor&limit=18").json()
+        assert metrics and metrics + next_metrics == combined
+        assert all(e["type"] == "computed_metric" and "harbor" in e["label"].lower() for e in combined)
+        assert client.get(evidence_url + "&offset=-1").status_code == 422
     finally:
         app.dependency_overrides.clear()
 

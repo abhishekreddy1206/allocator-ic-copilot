@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useDialogFocus } from "./useDialogFocus";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -60,6 +61,8 @@ const pages = [
   "Audit",
 ] as const;
 type Page = (typeof pages)[number];
+const AUDIT_PAGE_SIZE = 8;
+const ISSUE_PAGE_SIZE = 10;
 const workflow: { page: Page; title: string; description: string }[] = [
   {
     page: "Data Health",
@@ -185,14 +188,18 @@ export default function App() {
     [evidence, setEvidence] = useState<Evidence | null>(null),
     [memo, setMemo] = useState<Memo | null>(null),
     [challenge, setChallenge] = useState<Memo | null>(null);
+  const managerDialog = useDialogFocus(!!selected, () => setSelected(null));
   const [search, setSearch] = useState(""),
     [strategy, setStrategy] = useState("All strategies"),
     [sort, setSort] = useState("rank"),
     [issueFilter, setIssueFilter] = useState("attention"),
     [issuePage, setIssuePage] = useState(0),
-    [auditType, setAuditType] = useState(""),
+    [auditType, setAuditType] = useState("computed_metric"),
     [auditSearch, setAuditSearch] = useState(""),
     [auditRows, setAuditRows] = useState<Evidence[]>([]);
+  const [auditPage, setAuditPage] = useState(0),
+    [auditLoading, setAuditLoading] = useState(false),
+    [auditError, setAuditError] = useState("");
   const filteredIssues =
     health?.issues.filter(
       (i) =>
@@ -278,22 +285,32 @@ export default function App() {
   useEffect(() => {
     if (!run || page !== "Audit") return;
     let live = true;
+    setAuditLoading(true);
+    setAuditError("");
+    setAuditRows([]);
     const timer = setTimeout(() => {
       api<Evidence[]>(
-        `/evidence?run_id=${run.run_id}&type=${auditType}&q=${encodeURIComponent(auditSearch)}&limit=500`,
+        `/evidence?run_id=${run.run_id}&type=${encodeURIComponent(auditType)}&q=${encodeURIComponent(auditSearch)}&limit=${AUDIT_PAGE_SIZE + 1}&offset=${auditPage * AUDIT_PAGE_SIZE}`,
       )
         .then((rows) => {
           if (live) setAuditRows(rows);
         })
         .catch((e) => {
-          if (live) setError(e.message);
+          if (live) setAuditError(e.message);
+        })
+        .finally(() => {
+          if (live) setAuditLoading(false);
         });
     }, 200);
     return () => {
       live = false;
       clearTimeout(timer);
     };
-  }, [run, page, auditType, auditSearch]);
+  }, [run, page, auditType, auditSearch, auditPage]);
+  useEffect(() => {
+    setAuditPage(0);
+    setIssuePage(0);
+  }, [run?.run_id]);
   const openEvidence = async (id: string) => {
     try {
       setEvidence(await api<Evidence>(`/evidence/${encodeURIComponent(id)}`));
@@ -529,7 +546,19 @@ export default function App() {
               </button>
             </div>
           </div>
-          {run && (
+          {page === "Overview" && run && (
+            <div className="start-hint">
+              <p>
+                <strong>Start here:</strong> Explore the loaded universe below,
+                or choose <strong>Import Excel / CSV</strong> to review your own
+                manager data before saving.
+              </p>
+              <a href="/api/demo.csv" className="text-link">
+                Download sample CSV <Download size={14} />
+              </a>
+            </div>
+          )}
+          {run && page !== "Audit" && (
             <div
               className="workflow-rail"
               role="group"
@@ -817,19 +846,22 @@ export default function App() {
                         </p>
                       ))}
                     </details>
-                    <div className="category-chips">
-                      {Object.entries(health.categories).map(([k, v]) => (
-                        <button
-                          className={issueFilter === k ? "chosen" : ""}
-                          key={k}
-                          onClick={() =>
-                            changeIssueFilter(issueFilter === k ? "all" : k)
-                          }
-                        >
-                          {label(k)} <b>{v}</b>
-                        </button>
-                      ))}
-                    </div>
+                    <details className="metric-guide review-details">
+                      <summary>Browse issue categories</summary>
+                      <div className="category-chips">
+                        {Object.entries(health.categories).map(([k, v]) => (
+                          <button
+                            className={issueFilter === k ? "chosen" : ""}
+                            key={k}
+                            onClick={() =>
+                              changeIssueFilter(issueFilter === k ? "all" : k)
+                            }
+                          >
+                            {label(k)} <b>{v}</b>
+                          </button>
+                        ))}
+                      </div>
+                    </details>
                     <div className="filters">
                       <select
                         aria-label="Issue severity"
@@ -867,7 +899,10 @@ export default function App() {
                         </thead>
                         <tbody>
                           {filteredIssues
-                            .slice(issuePage * 100, (issuePage + 1) * 100)
+                            .slice(
+                              issuePage * ISSUE_PAGE_SIZE,
+                              (issuePage + 1) * ISSUE_PAGE_SIZE,
+                            )
                             .map((i) => (
                               <tr key={i.id}>
                                 <td>
@@ -890,7 +925,16 @@ export default function App() {
                                   </small>
                                 </td>
                                 <td className="issue-description">
-                                  {i.description}
+                                  {i.description.length > 180 ? (
+                                    <details>
+                                      <summary>
+                                        {i.description.slice(0, 140)}…
+                                      </summary>
+                                      <p>{i.description}</p>
+                                    </details>
+                                  ) : (
+                                    i.description
+                                  )}
                                 </td>
                                 <td>
                                   <small>
@@ -904,8 +948,11 @@ export default function App() {
                     </div>
                     <p className="footnote">
                       Page {issuePage + 1} of{" "}
-                      {Math.max(1, Math.ceil(filteredIssues.length / 100))} ·{" "}
-                      {filteredIssues.length} matching events.
+                      {Math.max(
+                        1,
+                        Math.ceil(filteredIssues.length / ISSUE_PAGE_SIZE),
+                      )}{" "}
+                      · {filteredIssues.length} matching events.
                       <button
                         className="button small"
                         disabled={issuePage === 0}
@@ -916,7 +963,8 @@ export default function App() {
                       <button
                         className="button small"
                         disabled={
-                          (issuePage + 1) * 100 >= filteredIssues.length
+                          (issuePage + 1) * ISSUE_PAGE_SIZE >=
+                          filteredIssues.length
                         }
                         onClick={() => setIssuePage(issuePage + 1)}
                       >
@@ -974,7 +1022,20 @@ export default function App() {
                       <option value="maximum_drawdown">Sort by drawdown</option>
                     </select>
                   </div>
+                  <details className="metric-guide review-details">
+                    <summary>How to read the performance metrics</summary>
+                    <p>
+                      Return is annualized compounded growth; volatility
+                      measures annualized variability in monthly returns. Sharpe
+                      compares excess return to volatility. Max DD is the
+                      largest observed peak-to-trough loss. Correlation measures
+                      how closely monthly returns move with the selected
+                      benchmark. Open a manager for methods, assumptions and
+                      evidence.
+                    </p>
+                  </details>
                   <FundTable
+                    key={`${run.run_id}:${strategy}:${sort}:${search}`}
                     funds={run.funds
                       .filter(
                         (f) =>
@@ -1001,7 +1062,10 @@ export default function App() {
                     <div className="panel-title">
                       <div>
                         <h2>Investment mandate</h2>
-                        <p>Hard gates. Soft preferences.</p>
+                        <p>
+                          Requirements decide who qualifies. Preferences decide
+                          how qualifying managers rank.
+                        </p>
                       </div>
                       <SlidersHorizontal size={18} />
                     </div>
@@ -1159,29 +1223,45 @@ export default function App() {
                         <p className="muted">
                           {f.strategy} · {f.liquidity}
                         </p>
-                        <Suitability fund={f} openEvidence={openEvidence} />
+                        <p className="shortlist-headline">
+                          {f.suitability?.headline}
+                        </p>
+                        <details className="review-details">
+                          <summary>
+                            Why it fits · {f.suitability?.concerns.length || 0}{" "}
+                            {f.suitability?.concerns.length === 1
+                              ? "concern"
+                              : "concerns"}{" "}
+                            to review
+                          </summary>
+                          <Suitability fund={f} openEvidence={openEvidence} />
+                        </details>
                         <div className="shortlist-score">
                           <strong>{num(f.total_score, 1)}</strong>
                           <span>TRANSPARENT SCORE / 100</span>
                         </div>
-                        {Object.entries(f.component_scores).map(([k, v]) => (
-                          <div className="score-component" key={k}>
-                            <div>
-                              <span>{label(k)}</span>
-                              <small>
-                                {num(v.contribution, 1)} pts ·{" "}
-                                {pct(v.weight, 0)} weight
-                              </small>
+                        <details className="review-details">
+                          <summary>How the score is calculated</summary>
+                          {Object.entries(f.component_scores).map(([k, v]) => (
+                            <div className="score-component" key={k}>
+                              <div>
+                                <span>{label(k)}</span>
+                                <small>
+                                  {num(v.contribution, 1)} pts ·{" "}
+                                  {pct(v.weight, 0)} weight
+                                </small>
+                              </div>
+                              <div className="score-track">
+                                <span style={{ width: `${v.score}%` }} />
+                              </div>
                             </div>
-                            <div className="score-track">
-                              <span style={{ width: `${v.score}%` }} />
-                            </div>
-                          </div>
-                        ))}
-                        <div className="card-risk">
+                          ))}
+                        </details>
+                        <details className="card-risk review-details">
+                          <summary>Manager source notes</summary>
                           <strong>DILIGENCE PRIORITY</strong>
                           <p>{f.qualitative_notes}</p>
-                        </div>
+                        </details>
                         <button
                           className="text-link"
                           onClick={() => setSelected(f)}
@@ -1267,13 +1347,31 @@ export default function App() {
               )}
               {page === "Audit" && (
                 <>
+                  {memo && (
+                    <details className="claim-browser audit-claims">
+                      <summary>
+                        Verify memo claims{" "}
+                        <span>
+                          {memo.claims.length} claims · linked to evidence
+                        </span>
+                      </summary>
+                      <div className="audit-claim-list">
+                        {memo.claims.map((c, i) => (
+                          <div key={i}>
+                            <p>{c.text}</p>
+                            {evidenceButtons(c)}
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
                   <div className="panel">
                     <div className="panel-title">
                       <div>
                         <h2>Evidence registry</h2>
                         <p>
-                          Evaluation-scoped facts · immutable lineage · exact
-                          source rows
+                          Inspect the facts behind your decision. Start with
+                          metrics, then explore source fields and market data.
                         </p>
                       </div>
                       <span className="tiny-label">
@@ -1285,15 +1383,21 @@ export default function App() {
                         <Search size={15} />
                         <input
                           aria-label="Search evidence"
-                          placeholder="Search manager, metric or source…"
+                          placeholder="Search manager or metric…"
                           value={auditSearch}
-                          onChange={(e) => setAuditSearch(e.target.value)}
+                          onChange={(e) => {
+                            setAuditSearch(e.target.value);
+                            setAuditPage(0);
+                          }}
                         />
                       </div>
                       <select
                         aria-label="Evidence type"
                         value={auditType}
-                        onChange={(e) => setAuditType(e.target.value)}
+                        onChange={(e) => {
+                          setAuditType(e.target.value);
+                          setAuditPage(0);
+                        }}
                       >
                         <option value="">All evidence types</option>
                         {[
@@ -1313,17 +1417,6 @@ export default function App() {
                         ))}
                       </select>
                     </div>
-                    {memo && (
-                      <div className="claim-browser">
-                        <h3>Memo claims → evidence</h3>
-                        {memo.claims.map((c, i) => (
-                          <div key={i}>
-                            <p>{c.text}</p>
-                            {evidenceButtons(c)}
-                          </div>
-                        ))}
-                      </div>
-                    )}
                     <div className="table-scroll">
                       <table>
                         <thead>
@@ -1336,7 +1429,7 @@ export default function App() {
                           </tr>
                         </thead>
                         <tbody>
-                          {auditRows.map((e) => (
+                          {auditRows.slice(0, AUDIT_PAGE_SIZE).map((e) => (
                             <tr
                               key={e.id}
                               onClick={() => openEvidence(e.id)}
@@ -1371,12 +1464,56 @@ export default function App() {
                               </td>
                             </tr>
                           ))}
+                          {!auditRows.length && (
+                            <tr>
+                              <td
+                                colSpan={5}
+                                className="audit-empty"
+                                role="status"
+                              >
+                                {auditLoading
+                                  ? "Finding evidence…"
+                                  : auditError
+                                    ? `Evidence could not load: ${auditError}`
+                                    : "No matching evidence. Try a different search or evidence type."}
+                              </td>
+                            </tr>
+                          )}
                         </tbody>
                       </table>
                     </div>
+                    <div
+                      className="audit-pagination"
+                      aria-label="Evidence pagination"
+                    >
+                      <span role="status">
+                        Page {auditPage + 1}
+                        {!auditLoading && auditRows.length > 0
+                          ? ` · Entries ${auditPage * AUDIT_PAGE_SIZE + 1}–${auditPage * AUDIT_PAGE_SIZE + Math.min(auditRows.length, AUDIT_PAGE_SIZE)}`
+                          : ""}
+                      </span>
+                      <div>
+                        <button
+                          className="button small"
+                          disabled={auditLoading || auditPage === 0}
+                          onClick={() => setAuditPage(auditPage - 1)}
+                        >
+                          Previous evidence
+                        </button>
+                        <button
+                          className="button small"
+                          disabled={
+                            auditLoading || auditRows.length <= AUDIT_PAGE_SIZE
+                          }
+                          onClick={() => setAuditPage(auditPage + 1)}
+                        >
+                          Next evidence
+                        </button>
+                      </div>
+                    </div>
                     <p className="footnote">
-                      Up to 500 matching entries; search and type filters reach
-                      all entries.
+                      Search and filters cover the entire registry. Select a row
+                      to inspect its calculation and original source.
                     </p>
                   </div>
                 </>
@@ -1412,6 +1549,8 @@ export default function App() {
         <div className="overlay" onClick={() => setSelected(null)}>
           <div
             className="drawer manager-drawer"
+            ref={managerDialog}
+            tabIndex={-1}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -1424,7 +1563,6 @@ export default function App() {
             >
               <X />
             </button>
-            <Suitability fund={selected} openEvidence={openEvidence} />
             <div className="eyebrow">
               {selected.synthetic ? "SYNTHETIC MANAGER" : "UPLOADED MANAGER"} /
               VERIFIED ANALYTICS
@@ -1435,6 +1573,10 @@ export default function App() {
               {selected.liquidity} liquidity
             </p>
             <Status eligible={selected.eligible} />
+            <details className="review-details">
+              <summary>Mandate fit, strengths & concerns</summary>
+              <Suitability fund={selected} openEvidence={openEvidence} />
+            </details>
             {!selected.eligible && (
               <div className="banner error">
                 <div>
@@ -1656,85 +1798,117 @@ function FundTable({
   compact?: boolean;
   benchmark: string;
 }) {
+  const [managerPage, setManagerPage] = useState(0);
+  const totalPages = Math.max(1, Math.ceil(funds.length / 8));
+  const currentPage = Math.min(managerPage, totalPages - 1);
   return (
-    <div className="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>Rank / manager</th>
-            <th>Return</th>
-            <th>Volatility</th>
-            <th>Sharpe</th>
-            {!compact && <th>Sortino</th>}
-            <th>Max DD</th>
-            <th>{benchmark} corr.</th>
-            {!compact && (
-              <>
-                <th>Factor R²</th>
-                <th>History</th>
-              </>
-            )}
-            <th>Liquidity</th>
-            <th>Mandate fit</th>
-          </tr>
-        </thead>
-        <tbody>
-          {funds.map((f) => (
-            <tr
-              key={f.id}
-              onClick={() => onSelect(f)}
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") onSelect(f);
-              }}
-            >
-              <td>
-                <div className="fund-cell">
-                  <span className={`table-rank ${f.eligible ? "" : "dim"}`}>
-                    {f.rank ? String(f.rank).padStart(2, "0") : "—"}
-                  </span>
-                  <div>
-                    <strong>{f.canonical_name}</strong>
-                    <small>
-                      {f.strategy}
-                      {f.synthetic ? " · synthetic" : ""}
-                    </small>
-                  </div>
-                </div>
-              </td>
-              <td className="green-text">{pct(f.metrics.annualized_return)}</td>
-              <td>{pct(f.metrics.annualized_volatility)}</td>
-              <td>{num(f.metrics.sharpe_ratio)}</td>
-              {!compact && <td>{num(f.metrics.sortino_ratio)}</td>}
-              <td>{pct(f.metrics.maximum_drawdown)}</td>
-              <td>{num(f.metrics.benchmark_correlation)}</td>
+    <>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Rank / manager</th>
+              <th>Return</th>
+              <th>Volatility</th>
+              <th>Sharpe</th>
+              {!compact && <th>Sortino</th>}
+              <th>Max DD</th>
+              <th>{benchmark} corr.</th>
               {!compact && (
                 <>
-                  <td>{pct(f.factors.r_squared)}</td>
-                  <td>
-                    {f.metrics.observation_count}m
-                    {!f.metrics.contiguous ? " ⚠" : ""}
-                  </td>
+                  <th>Factor R²</th>
+                  <th>History</th>
                 </>
               )}
-              <td className="capitalize">{f.liquidity}</td>
-              <td>
-                <Status eligible={f.eligible} />
-                {!f.eligible && (
-                  <small
-                    className="reason-preview"
-                    title={f.failed_constraints.map((x) => x.reason).join(" ")}
-                  >
-                    {f.failed_constraints[0]?.reason}
-                  </small>
-                )}
-              </td>
+              <th>Liquidity</th>
+              <th>Mandate fit</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      {!funds.length && <Empty text="No managers match this filter." />}
-    </div>
+          </thead>
+          <tbody>
+            {funds.slice(currentPage * 8, (currentPage + 1) * 8).map((f) => (
+              <tr
+                key={f.id}
+                onClick={() => onSelect(f)}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") onSelect(f);
+                }}
+              >
+                <td>
+                  <div className="fund-cell">
+                    <span className={`table-rank ${f.eligible ? "" : "dim"}`}>
+                      {f.rank ? String(f.rank).padStart(2, "0") : "—"}
+                    </span>
+                    <div>
+                      <strong>{f.canonical_name}</strong>
+                      <small>
+                        {f.strategy}
+                        {f.synthetic ? " · synthetic" : ""}
+                      </small>
+                    </div>
+                  </div>
+                </td>
+                <td className="green-text">
+                  {pct(f.metrics.annualized_return)}
+                </td>
+                <td>{pct(f.metrics.annualized_volatility)}</td>
+                <td>{num(f.metrics.sharpe_ratio)}</td>
+                {!compact && <td>{num(f.metrics.sortino_ratio)}</td>}
+                <td>{pct(f.metrics.maximum_drawdown)}</td>
+                <td>{num(f.metrics.benchmark_correlation)}</td>
+                {!compact && (
+                  <>
+                    <td>{pct(f.factors.r_squared)}</td>
+                    <td>
+                      {f.metrics.observation_count}m
+                      {!f.metrics.contiguous ? " ⚠" : ""}
+                    </td>
+                  </>
+                )}
+                <td className="capitalize">{f.liquidity}</td>
+                <td>
+                  <Status eligible={f.eligible} />
+                  {!f.eligible && (
+                    <small
+                      className="reason-preview"
+                      title={f.failed_constraints
+                        .map((x) => x.reason)
+                        .join(" ")}
+                    >
+                      {f.failed_constraints[0]?.reason}
+                    </small>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!funds.length && <Empty text="No managers match this filter." />}
+      </div>
+      {!!funds.length && (
+        <div className="audit-pagination" aria-label="Manager pagination">
+          <span>
+            Page {currentPage + 1} of {totalPages} · {funds.length} managers
+          </span>
+          <div>
+            <button
+              className="button small"
+              disabled={currentPage === 0}
+              onClick={() => setManagerPage(currentPage - 1)}
+            >
+              Previous managers
+            </button>
+            <button
+              className="button small"
+              disabled={currentPage + 1 >= totalPages}
+              onClick={() => setManagerPage(currentPage + 1)}
+            >
+              Next managers
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 function RiskChart({ funds }: { funds: Fund[] }) {
@@ -2075,6 +2249,7 @@ function EvidenceDrawer({
 }) {
   const [row, setRow] = useState<unknown>(null),
     [rowError, setRowError] = useState("");
+  const evidenceDialog = useDialogFocus(true, onClose);
   useEffect(() => {
     setRow(null);
     setRowError("");
@@ -2105,6 +2280,8 @@ function EvidenceDrawer({
     <div className="overlay evidence-overlay" onClick={onClose}>
       <div
         className="drawer evidence-drawer"
+        ref={evidenceDialog}
+        tabIndex={-1}
         onClick={(ev) => ev.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -2153,19 +2330,22 @@ function EvidenceDrawer({
         {sourceRows.length > 0 && (
           <>
             <h3>Underlying observations ({sourceRows.length})</h3>
-            <div className="source-rows">
-              {sourceRows.map((r) => (
-                <button
-                  key={r.period}
-                  onClick={() => openRow(r.upload_id, r.source_row)}
-                >
-                  {r.period}
-                  <span>{pct(r.return_value, 2)}</span>
-                  <small>Source row {r.source_row}</small>
-                  <ExternalLink size={12} />
-                </button>
-              ))}
-            </div>
+            <details className="review-details">
+              <summary>Inspect monthly source observations</summary>
+              <div className="source-rows">
+                {sourceRows.map((r) => (
+                  <button
+                    key={r.period}
+                    onClick={() => openRow(r.upload_id, r.source_row)}
+                  >
+                    {r.period}
+                    <span>{pct(r.return_value, 2)}</span>
+                    <small>Source row {r.source_row}</small>
+                    <ExternalLink size={12} />
+                  </button>
+                ))}
+              </div>
+            </details>
           </>
         )}
         {rowError && <p role="alert">{rowError}</p>}
