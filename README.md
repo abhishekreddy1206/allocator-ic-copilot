@@ -21,14 +21,12 @@ For AI memo generation, follow the local Ollama or optional OpenAI instructions 
 
 ## Use the app
 
-1. Explore the sample universe or choose **Import Excel / CSV**. Review validation results before confirming an import.
+1. Explore the sample universe and **Market trends** on Overview, or choose **Import Excel / CSV**. Review validation results before confirming an import.
 2. Check **Data Health**, then compare managers in **Universe**.
 3. Set your investment criteria in **Decision Room** and review the **Shortlist**.
 4. Create a draft in **IC Memo**, inspect citations in **Audit**, and export Word or Excel.
 
-Choose **Refresh public data** to retrieve benchmark and market inputs. The app labels live data and synthetic fallbacks.
-
-**Market trends** on Overview shows the selected benchmark’s recent growth, returns and volatility, plus available VIX and Treasury-yield readings. Dates, source status and underlying observations stay tied to the saved evaluation.
+**Market trends** shows benchmark growth, 3- and 12-month returns, volatility, VIX and Treasury yields. Choose **Refresh public data** to retrieve newer inputs. Observation dates, live/synthetic labels and evidence links show what each saved evaluation used.
 
 ## Test
 

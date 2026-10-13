@@ -54,6 +54,12 @@ Review column mappings, errors and warnings before confirming. Returns accept de
 
 Sample files and their provenance are listed in [DATA_SOURCES.md](DATA_SOURCES.md).
 
+## View market trends
+
+On **Overview**, scroll to **Market trends**. The chart follows the benchmark selected in **Decision Room**. **Source observation**, **Prior month**, and **Methods & benchmark source observations** open the supporting evidence or explain the calculations.
+
+Choose **Refresh public data** under Market data & provenance to retrieve newer inputs and create an updated evaluation. **Load demo** restores synthetic market fixtures. Each indicator has its own observation date; these are monthly historical readings, not real-time quotes. Missing history leaves affected metrics unavailable.
+
 ## Verify
 
 ```sh
@@ -66,7 +72,7 @@ Additional checks:
 
 | Command | Requirements and purpose |
 | --- | --- |
-| `make test-unit` | Python 3.12 environment with `backend/requirements.lock` installed; database-free tests using mocked providers |
+| `make test-unit` | Python 3.12 environment with `backend/requirements.lock` installed; database-free analytics, market trends, mandate and validator tests using mocked providers |
 | `make build` | Local Node 22.13+; install and build the frontend |
 | `make lint` | Frontend dependencies installed and Compose backend running |
 | `make smoke` | Running app; checks the fixed synthetic mandate journey |

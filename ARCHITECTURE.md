@@ -12,6 +12,8 @@ flowchart LR
     Analytics --> Criteria[Eligibility and ranking]
     Criteria --> Evidence[Saved evaluation and evidence]
     Evidence --> UI[React workspace]
+    Evidence --> Trends[Historical market context]
+    Trends --> UI
     Evidence --> AI[Optional AI interpretation]
     AI --> Checks[Claim validation]
     Checks --> Memo[Saved memo and exports]
@@ -31,6 +33,8 @@ Raw uploads retain their original bytes, SHA-256 digest, mappings, corrections a
 Public retrieval is explicit. Each failed source uses an explicitly labeled synthetic fallback. AI or market-provider failure preserves the evaluation and available briefing.
 
 Market trends are computed on demand from a run’s saved benchmark and macro evidence, without retrieving new data or changing that run. Period returns require complete consecutive 3- or 12-month windows; annualized volatility uses 12 monthly returns. The chart compounds a starting index of 100. Macro changes require adjacent months and show each series’ own date and source status.
+
+`GET /api/runs/{run_id}/market-context` also works for existing saved evaluations. The panel loads independently, so a failed request leaves the rest of the workspace usable and offers a retry.
 
 ## Code map
 
